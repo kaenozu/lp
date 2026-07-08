@@ -278,15 +278,8 @@ a:hover {
 .hero .container {
   position: relative;
   z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 40px;
-}
-
-.hero__content {
   text-align: center;
-  max-width: 640px;
+  max-width: 720px;
 }
 
 .hero__label {
@@ -332,14 +325,6 @@ a:hover {
   justify-content: center;
   gap: 12px;
   animation: fadeInUp 0.7s ease-out 0.3s both;
-}
-
-.hero__visual {
-  animation: fadeIn 1s ease-out 0.5s both;
-}
-
-.hero .phone-mock {
-  animation: float 5s ease-in-out 1.5s infinite;
 }
 
 /* ===== Card Grid ===== */
@@ -856,10 +841,6 @@ a:hover {
   padding: 0 0 64px;
 }
 
-.section--empathy {
-  background: linear-gradient(180deg, var(--color-bg) 0%, var(--color-surface) 100%);
-}
-
 .section--cta {
   background: var(--color-surface);
 }
@@ -991,29 +972,6 @@ a:hover {
   .hero__title {
     font-size: 2.6rem;
   }
-
-  .hero .container {
-    flex-direction: row;
-    text-align: left;
-  }
-
-  .hero__content {
-    text-align: left;
-    flex: 1;
-  }
-
-  .hero__desc {
-    margin-left: 0;
-    margin-right: 0;
-  }
-
-  .hero__actions {
-    justify-content: flex-start;
-  }
-
-  .hero__visual {
-    flex-shrink: 0;
-  }
 }
 
 @media (min-width: 900px) {
@@ -1033,7 +991,4 @@ a:hover {
     font-size: 1.8rem;
   }
 
-  .section--empathy {
-    padding: 100px 0;
-  }
 }
