@@ -64,6 +64,13 @@ a:hover {
   color: var(--color-primary);
 }
 
+a:focus-visible,
+button:focus-visible,
+.btn:focus-visible {
+  outline: 3px solid var(--color-primary-dark);
+  outline-offset: 3px;
+}
+
 /* ===== Animations ===== */
 @keyframes fadeInUp {
   from {
@@ -750,6 +757,14 @@ a:hover {
   position: relative;
 }
 
+.cta-banner__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  position: relative;
+}
+
 /* ===== Content page (privacy/terms) ===== */
 .content-page {
   max-width: 720px;
@@ -802,8 +817,8 @@ a:hover {
   text-align: center;
 }
 
-.contact-placeholder__email {
-  font-size: 1.1rem;
+.contact-placeholder__text {
+  font-size: 1rem;
   font-weight: 600;
   color: var(--color-text);
   margin: 8px 0;
@@ -812,6 +827,27 @@ a:hover {
 .contact-placeholder__note {
   font-size: 0.85rem;
   color: var(--color-muted);
+}
+
+/* ===== Notice box (privacy/terms) ===== */
+.notice-box {
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  margin: 20px 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.todo-note {
+  font-size: 0.85rem;
+  color: var(--color-muted);
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  margin: 16px 0;
 }
 
 /* ===== Back link ===== */
