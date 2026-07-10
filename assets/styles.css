@@ -919,6 +919,51 @@ button:focus-visible,
   display: block;
 }
 
+.card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.card__category {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 50px;
+  background: var(--color-surface);
+  color: var(--color-muted);
+  border: 1px solid var(--color-border);
+}
+
+.card__status {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 50px;
+}
+
+.card__status--planning {
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+}
+
+.card__status--concept {
+  background: #f0f0f0;
+  color: var(--color-muted);
+}
+
+.card--disabled {
+  opacity: 0.8;
+}
+
+.card--disabled:hover {
+  transform: none;
+  box-shadow: var(--shadow-card);
+}
+
 .section__subtitle--narrow {
   max-width: 580px;
   margin-left: auto;
