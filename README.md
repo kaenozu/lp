@@ -59,6 +59,32 @@ python -m http.server 8123
 - アクセシビリティ対応（`:focus-visible`, `aria-label`, `prefers-reduced-motion`）
 - SEO メタタグ（title, description, OGP, Twitter Card, canonical）対応済み
 
+## 新アプリの追加方法
+
+新アプリを増やす場合は、必ず `docs/app-lp-template.md` と `docs/new-app-checklist.md` を参照してください。
+
+### ルートページへのカード追加
+
+`index.html` の `.card-grid` にカードを追加します。
+
+- 公開済み：`<a href="/apps/{slug}/" class="card card--block">...</a>`
+- 構想中：`<div class="card card--disabled">...</div>`
+
+構想中のアプリは `card--disabled` を使い、リンクなしで表示します。
+
+### ディレクトリ構成ルール
+
+各アプリは `apps/{slug}/` に配置し、以下の4ファイルを必ず作成します。
+
+- `index.html`：アプリ紹介LP
+- `privacy.html`：プライバシーポリシー
+- `terms.html`：利用規約
+- `contact.html`：お問い合わせ
+
+### OGP画像の命名規則
+
+OGP画像は必ず `assets/ogp-{slug}.png` と命名し、サイズは 1200×630 の PNG で作成してください。
+
 ## 公開前チェックリスト
 
 本番公開前に、以下の項目を確認・修正してください。
