@@ -44,12 +44,19 @@ python -m http.server 8123
 │   ├── app.js                          # JavaScript（年表示のみ）
 │   ├── favicon.png                     # ファビコン（仮）
 │   ├── ogp.png                         # OGP画像（ルートページ用、仮）
-│   └── ogp-ashita-motsumono.png        # OGP画像（アプリLP用、仮）
-└── apps/ashita-motsumono/
-    ├── index.html                      # アプリ紹介LP
-    ├── privacy.html                    # プライバシーポリシー
-    ├── terms.html                      # 利用規約
-    └── contact.html                    # お問い合わせ
+│   ├── ogp-ashita-motsumono.png        # OGP画像（あしたもつもの用、仮）
+│   └── ogp-ehenotane.png               # OGP画像（へぇの種用、仮）
+└── apps/
+    ├── ashita-motsumono/
+    │   ├── index.html                  # アプリ紹介LP
+    │   ├── privacy.html                # プライバシーポリシー
+    │   ├── terms.html                  # 利用規約
+    │   └── contact.html                # お問い合わせ
+    └── ehenotane/
+        ├── index.html                  # アプリ紹介LP
+        ├── privacy.html                # プライバシーポリシー
+        ├── terms.html                  # 利用規約
+        └── contact.html                # お問い合わせ
 ```
 
 ## 技術スタック
