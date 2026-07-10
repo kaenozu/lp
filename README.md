@@ -69,10 +69,35 @@ python -m http.server 8123
 
 ### 画像・アイコン
 
-- [ ] favicon を正式版アイコンに差し替える（`assets/favicon.png`）
-- [ ] OGP画像（ルートページ用）を正式版に差し替える（`assets/ogp.png`）
-- [ ] OGP画像（アプリLP用）を正式版に差し替える（`assets/ogp-ashita-motsumono.png`）
-- [ ] スマホモックを実機スクリーンショットに差し替える（`apps/ashita-motsumono/index.html` の `.phone-mock` と `.screenshot-grid`）
+- [ ] favicon を正式版アイコンに差し替える
+  - 現在: `assets/favicon.png`（64×64, 506B, 仮画像）
+  - 推奨: 32×32 または 192×192 の PNG、あるいは `.ico` 形式
+- [ ] OGP画像（ルートページ用）を正式版に差し替える
+  - 現在: `assets/ogp.png`（1200×630, 6KB, 仮画像）
+  - サイズは適正だが6KBと小さいため、正式版では品質を確保すること
+- [ ] OGP画像（アプリLP用）を正式版に差し替える
+  - 現在: `assets/ogp-ashita-motsumono.png`（1200×630, 8KB, 仮画像）
+  - サイズは適正だが8KBと小さいため、正式版では品質を確保すること
+- [ ] スマホモックを実機スクリーンショットに差し替える
+
+  **必要なスクリーンショット一覧:**
+  | # | 画面内容 | 現在の箇所 | 推奨サイズ |
+  |---|---|---|---|
+  | 1 | 明日の持ち物一覧 | `apps/ashita-motsumono/index.html` の `.screenshot-grid` 1つ目 | 1170×2532（iPhone相当）または画面比率に合わせて |
+  | 2 | 提出物チェック | `.screenshot-grid` 2つ目 | 同上 |
+  | 3 | 準備完了画面 | `.screenshot-grid` 3つ目 | 同上 |
+
+  **差し替え手順:**
+  1. 実機（iOS/Android）でスクリーンショットを撮影
+  2. `assets/screenshots/` ディレクトリを作成し、画像を配置
+  3. `.phone-mock` ブロックを `<img>` タグに置き換え
+  4. 各画像に適切な `alt` 属性を設定（例: `alt="あしたもつもの 持ち物一覧画面のスクリーンショット"`）
+  5. ヘッダーの `9:41` などの固定表示は不要になる
+
+  **alt文言の方針:**
+  - 画面の目的を簡潔に（例: 「明日の持ち物一覧画面」「提出物チェック画面」）
+  - 「スクリーンショット」の語を含める
+  - スクリーンリーダー利用者に不足情報が伝わるようにする
 
 ### お問い合わせ
 
@@ -107,6 +132,11 @@ python -m http.server 8123
 - [ ] OGPプレビュー（Facebook Sharing Debugger / Twitter Card Validator）で正しく表示されることを確認する
 - [ ] フォーカス移動（Tabキー操作）で全リンク・ボタンにフォーカスが当たることを確認する
 - [ ] ダークモードで最低限読めることを確認する（`prefers-color-scheme` 未対応の場合は白背景が維持されることを確認）
+- [ ] Lighthouseで品質を確認する
+  - ローカルサーバー起動後、Chrome DevTools → Lighthouse で測定
+  - 確認項目: Performance / Accessibility / Best Practices / SEO
+  - 目標スコア: SEO 90+, Accessibility 90+, Best Practices 80+
+  - 注意: 現状未測定。Cloudflare Pages 公開後にも再測定推奨
 
 ### コンテンツ
 
