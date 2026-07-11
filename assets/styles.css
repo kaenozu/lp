@@ -1230,6 +1230,29 @@ button:focus-visible,
   margin-top: 16px;
 }
 
+/* ===== Source Links ===== */
+.quiz-card__source a,
+.example-card__source a {
+  color: var(--color-muted);
+  text-decoration: underline;
+  text-decoration-color: var(--color-border);
+  text-underline-offset: 3px;
+  transition: color 0.2s, text-decoration-color 0.2s;
+}
+
+.quiz-card__source a:hover,
+.example-card__source a:hover {
+  color: var(--color-primary-dark);
+  text-decoration-color: var(--color-primary-dark);
+}
+
+.quiz-card__source a::after,
+.example-card__source a::after {
+  content: " ↗";
+  font-size: 0.75em;
+  display: inline-block;
+}
+
 /* ===== Example Grid ===== */
 .example-grid {
   display: grid;

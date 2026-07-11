@@ -12,7 +12,8 @@
     correctText: "実は同じ（7個）",
     explanation:
       "キリンも人間も、通常は首の骨である頸椎が7個あります。キリンの首が長いのは、骨の数が多いからではなく、一つ一つの頸椎が長いためです。",
-    source: "出典: 国立科学博物館「動物の骨格」／東京大学総合研究博物館 比較解剖学標本",
+    source:
+      '出典: <a href="https://www.toyo.ac.jp/link-toyo/life/giraffe" target="_blank" rel="noopener noreferrer">東洋大学 リンク東洋「キリンと頸椎」</a>／国立科学博物館「動物の骨格」',
     category: "生物",
     difficulty: "easy",
   };
@@ -38,10 +39,8 @@
       var idx = parseInt(btn.getAttribute("data-index"), 10);
       if (idx === quizData.correctIndex) {
         btn.classList.add("quiz-card__choice--correct");
-        btn.setAttribute("aria-checked", idx === index ? "true" : "false");
       } else if (idx === index) {
         btn.classList.add("quiz-card__choice--incorrect");
-        btn.setAttribute("aria-checked", "true");
       }
     });
 
@@ -55,7 +54,7 @@
     answerEl.textContent = "正解: " + quizData.correctText;
     explanationEl.textContent = quizData.explanation;
     metaEl.textContent = "カテゴリ: " + quizData.category + "　難易度: " + quizData.difficulty;
-    sourceEl.textContent = quizData.source;
+    sourceEl.innerHTML = quizData.source;
 
     resultArea.hidden = false;
   }
