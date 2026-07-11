@@ -15,7 +15,7 @@
   --color-primary-dark: #8a4f00;
   --color-primary-light: #fef0d6;
   --color-border: #eadfce;
-  --color-success: #5ba85a;
+  --color-success: #3a7a3a;
   --color-danger: #d96c5a;
   --radius-lg: 24px;
   --radius-md: 16px;
@@ -112,6 +112,15 @@ button:focus-visible,
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* ===== Anchor scroll offset ===== */
+[id] {
+  scroll-margin-top: 96px;
 }
 
 /* ===== Utility ===== */
