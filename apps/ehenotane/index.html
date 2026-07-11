@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>へぇの種 | 「へぇ」を種まきして、知識を育てよう。</title>
-  <meta name="description" content="毎日少しずつ雑学クイズに挑戦し、「知る楽しさ」を習慣にするアプリ。4択クイズでジャンル別・難易度別に楽しめます。">
-  <meta property="og:title" content="へぇの種 | 「へぇ」を種まきして、知識を育てよう。">
-  <meta property="og:description" content="毎日少しずつ雑学クイズに挑戦し、「知る楽しさ」を習慣にするアプリです。">
+  <title>へぇの種 | 1分あれば、ひとつ「へぇ」が増える。</title>
+  <meta name="description" content="自然、生物、歴史、科学、食べ物、言葉、暮らし。4択クイズと短い解説で、知らなかったことに出会う雑学アプリ。">
+  <meta property="og:title" content="へぇの種 | 1分あれば、ひとつ「へぇ」が増える。">
+  <meta property="og:description" content="4択クイズと短い解説で、知らなかったことに出会う雑学アプリ。">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://lp-5t7.pages.dev/apps/ehenotane/">
   <meta property="og:image" content="https://lp-5t7.pages.dev/assets/ogp-ehenotane.png">
@@ -20,12 +20,13 @@
   <header class="header">
     <div class="container header__inner">
       <a href="/apps/ehenotane/" class="header__logo">へぇの種</a>
+      <span class="badge badge--status">準備中</span>
       <nav class="header__nav" aria-label="メインナビゲーション">
-        <a href="#features">できること</a>
-        <a href="#usage">使い方</a>
-        <a href="#faq">よくある質問</a>
+        <a href="#sample-quiz">1問試す</a>
+        <a href="#values">アプリの紹介</a>
+        <a href="#examples">問題例</a>
+        <a href="#faq">FAQ</a>
       </nav>
-      <a href="mailto:kaenozu@gmail.com?subject=へぇの種のリリース情報について" class="btn btn--primary btn--sm header__cta">リリース情報を受け取る</a>
     </div>
   </header>
 
@@ -34,108 +35,205 @@
     <!-- ===== Hero ===== -->
     <section class="hero">
       <div class="container">
-        <h1 class="hero__title">「へぇ」を種まきして、<br>知識を育てよう。</h1>
-        <p class="hero__sub">毎日少しずつ雑学クイズに挑戦し、「知る楽しさ」を習慣にするアプリです。</p>
-        <p class="hero__desc">ジャンル別に楽しめる4択クイズ。解説を読んで「へぇ」と思える瞬間を、毎日の習慣にしてください。</p>
+        <h1 class="hero__title">1分あれば、ひとつ「へぇ」が増える。</h1>
+        <p class="hero__desc">自然、生物、歴史、科学、食べ物、言葉、暮らし。4択クイズと短い解説で、知らなかったことに出会う雑学アプリ。</p>
         <div class="hero__actions">
-          <a href="mailto:kaenozu@gmail.com?subject=へぇの種のリリース情報について" class="btn btn--primary">リリース情報を受け取る</a>
-          <a href="#features" class="btn btn--outline">できることを見る</a>
+          <a href="#sample-quiz" class="btn btn--primary">1問試してみる</a>
+          <a href="#values" class="btn btn--outline">どんなアプリか見る</a>
         </div>
       </div>
     </section>
 
-    <!-- ===== こんな人におすすめ ===== -->
-    <section class="section section--surface">
+    <!-- ===== サンプルクイズ ===== -->
+    <section class="section section--surface" id="sample-quiz">
       <div class="container">
-        <h2 class="section__title">こんな人におすすめ</h2>
-        <p class="section__subtitle">「知識は好きだけど、勉強は苦手」という方に。</p>
-        <div class="feature-grid">
+        <h2 class="section__title">1分だけ、試してみませんか？</h2>
+        <p class="section__subtitle section__subtitle--narrow">1問答えるだけで、「へぇの種」がどんなアプリかわかります。</p>
+        <div class="quiz-card" role="region" aria-label="サンプルクイズ">
+          <div class="quiz-card__question">
+            <p>Q. キリンと人間、首の骨の数はどちらが多い？</p>
+          </div>
+          <div class="quiz-card__choices" role="radiogroup" aria-label="選択肢">
+            <button class="quiz-card__choice" role="radio" aria-checked="false" data-index="0">キリンの方が多い</button>
+            <button class="quiz-card__choice" role="radio" aria-checked="false" data-index="1">人間の方が多い</button>
+            <button class="quiz-card__choice" role="radio" aria-checked="false" data-index="2">実は同じ</button>
+            <button class="quiz-card__choice" role="radio" aria-checked="false" data-index="3">個体によって違う</button>
+          </div>
+          <div class="quiz-card__result" aria-live="polite" hidden>
+            <div class="quiz-card__verdict" id="verdict"></div>
+            <p class="quiz-card__answer" id="answerText"></p>
+            <p class="quiz-card__explanation" id="explanationText"></p>
+            <div class="quiz-card__meta" id="metaInfo"></div>
+            <p class="quiz-card__source" id="sourceText"></p>
+            <a href="#examples" class="btn btn--outline quiz-card__examples-link">他の問題例を見る &rarr;</a>
+          </div>
+          <noscript>
+            <p class="quiz-card__noscript">このサンプルクイズはJavaScriptを有効にすると答えることができます。</p>
+          </noscript>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 3つの利用価値 ===== -->
+    <section class="section" id="values">
+      <div class="container">
+        <h2 class="section__title">こんなアプリです</h2>
+        <div class="value-grid">
           <div class="feature-card">
             <div class="feature-card__icon">&#x1F4AD;</div>
-            <h3 class="feature-card__title">暇つぶしに知的好奇心を満たしたい</h3>
-            <p class="feature-card__desc">ただ消費するだけの暇つぶしではなく、「へぇ」と思える短時間の学びを求める方に。</p>
+            <h3 class="feature-card__title">答えた後がおもしろい</h3>
+            <p class="feature-card__desc">正解だけで終わらない。1問ごとに短い解説を表示。「へぇ」と思ったことを、誰かに話したくなる。</p>
           </div>
           <div class="feature-card">
-            <div class="feature-card__icon">&#x1F4DA;</div>
-            <h3 class="feature-card__title">雑学や豆知識が好き</h3>
-            <p class="feature-card__desc">トリビア、豆知識、雑学記事が好きだけど、読むだけで終わってしまう。クイズ形式なら記憶に残る。</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-card__icon">&#x1F4AC;</div>
-            <h3 class="feature-card__title">SNSで話せるネタが欲しい</h3>
-            <p class="feature-card__desc">友人や家族に「これ知ってる？」と自慢できる小ネタを、毎日少しずつ蓄積したい方に。</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===== できること ===== -->
-    <section class="section" id="features">
-      <div class="container">
-        <h2 class="section__title">できること</h2>
-        <p class="section__subtitle">初期版で予定している機能です。</p>
-        <div class="feature-grid">
-          <div class="feature-card">
-            <div class="feature-card__icon">&#x1F6E1;&#xFE0F;</div>
-            <h3 class="feature-card__title">4択クイズ</h3>
-            <p class="feature-card__desc">1問ずつ4つの選択肢から選ぶ、シンプルなクイズ形式。すぐに始められます。</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-card__icon">&#x1F4D6;</div>
-            <h3 class="feature-card__title">解説表示</h3>
-            <p class="feature-card__desc">回答後に正解/不正解の判定と解説を表示。知識として定着しやすくなっています。</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-card__icon">&#x1F3F7;&#xFE0F;</div>
-            <h3 class="feature-card__title">カテゴリ別</h3>
-            <p class="feature-card__desc">自然・生物・歴史・科学・食べ物・言葉・暮らしなど、ジャンルを選んで楽しめます。</p>
+            <div class="feature-card__icon">&#x1F50D;</div>
+            <h3 class="feature-card__title">根拠まで確認できる</h3>
+            <p class="feature-card__desc">各問題に参考資料や出典を明記。気になったら自分で深掘りできる。</p>
           </div>
           <div class="feature-card">
             <div class="feature-card__icon">&#x1F3AF;</div>
-            <h3 class="feature-card__title">難易度別</h3>
-            <p class="feature-card__desc">easy / normal / hard の3段階。自分のレベルに合わせて選べます。</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-card__icon">&#x1F504;</div>
-            <h3 class="feature-card__title">ランダム出題</h3>
-            <p class="feature-card__desc">選んだカテゴリ・難易度からランダムに出題。毎回新しい問題に出会えます。</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-card__icon">&#x1F4E6;</div>
-            <h3 class="feature-card__title">ローカル完結</h3>
-            <p class="feature-card__desc">問題データはアプリ内に保存。オフラインでも問題なく使えます。</p>
+            <h3 class="feature-card__title">好きな分野だけ楽しめる</h3>
+            <p class="feature-card__desc">自然・地理、生物、歴史、科学、食べ物、言葉、暮らし。7カテゴリと3段階の難易度から選べる予定です。</p>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ===== 使い方 ===== -->
-    <section class="section section--surface" id="usage">
+    <!-- ===== 問題例 ===== -->
+    <section class="section section--surface" id="examples">
       <div class="container">
-        <h2 class="section__title">使い方</h2>
-        <p class="section__subtitle">シンプルな3ステップ</p>
-        <div class="steps">
-          <div class="step">
-            <h3 class="step__title">カテゴリと難易度を選ぶ</h3>
-            <p class="step__desc">好きなジャンルと難易度を選択します。複数のカテゴリを組み合わせることも可能です。</p>
-          </div>
-          <div class="step">
-            <h3 class="step__title">クイズに答える</h3>
-            <p class="step__desc">4つの選択肢から答えを選びます。選ぶとすぐに正解/不正解が表示されます。</p>
-          </div>
-          <div class="step">
-            <h3 class="step__title">解説を読んで次へ</h3>
-            <p class="step__desc">正解/不正解の判定と解説を確認したら、「次の問題へ」で進みます。</p>
-          </div>
+        <h2 class="section__title">まだまだあります。こんな問題も。</h2>
+        <p class="section__subtitle section__subtitle--narrow">初期版では30問以上の収録を予定しています。</p>
+        <div class="example-grid">
+
+          <article class="example-card">
+            <div class="example-card__meta">
+              <span class="badge badge--category">自然・地理</span>
+              <span class="badge badge--difficulty">normal</span>
+            </div>
+            <p class="example-card__question">世界で最も面積が広い砂漠は？</p>
+            <ul class="example-card__choices">
+              <li>サハラ砂漠</li>
+              <li>ゴビ砂漠</li>
+              <li>南極</li>
+              <li>アラビア砂漠</li>
+            </ul>
+            <details class="example-card__answer">
+              <summary>答えを見る</summary>
+              <p class="example-card__correct">正解: 南極</p>
+              <p class="example-card__explanation">砂漠は「年間降水量が250mm未満」の地域と定義される。南極大陸の年間降水量は約50mmと非常に少なく、世界最大の砂漠とされる。</p>
+              <p class="example-card__source">出典: 気象庁「世界の気候」／NASA Earth Observatory</p>
+            </details>
+          </article>
+
+          <article class="example-card">
+            <div class="example-card__meta">
+              <span class="badge badge--category">生物</span>
+              <span class="badge badge--difficulty">easy</span>
+            </div>
+            <p class="example-card__question">ホッキョクグマの皮膚の色は？</p>
+            <ul class="example-card__choices">
+              <li>白い</li>
+              <li>黒い</li>
+              <li>ピンク色</li>
+              <li>灰色</li>
+            </ul>
+            <details class="example-card__answer">
+              <summary>答えを見る</summary>
+              <p class="example-card__correct">正解: 黒い</p>
+              <p class="example-card__explanation">体毛は透明な中空構造で光が散乱して白く見える。皮膚は黒く、太陽熱を吸収して寒冷な環境に適応している。</p>
+              <p class="example-card__source">出典: WWFジャパン「ホッキョクグマ」／国立科学博物館 動物展示</p>
+            </details>
+          </article>
+
+          <article class="example-card">
+            <div class="example-card__meta">
+              <span class="badge badge--category">歴史</span>
+              <span class="badge badge--difficulty">normal</span>
+            </div>
+            <p class="example-card__question">大坂城の石垣で使われている最大の石「蛸石」の重さは？</p>
+            <ul class="example-card__choices">
+              <li>約1トン</li>
+              <li>約15トン</li>
+              <li>約130トン</li>
+              <li>約500トン</li>
+            </ul>
+            <details class="example-card__answer">
+              <summary>答えを見る</summary>
+              <p class="example-card__correct">正解: 約130トン</p>
+              <p class="example-card__explanation">高さ5.5m、幅11.7mの花崗岩で、約130トンの重さがある。大型トラック約20台分に相当する大きさ。</p>
+              <p class="example-card__source">出典: 大阪城天守閣 公式サイト</p>
+            </details>
+          </article>
+
+          <article class="example-card">
+            <div class="example-card__meta">
+              <span class="badge badge--category">科学</span>
+              <span class="badge badge--difficulty">easy</span>
+            </div>
+            <p class="example-card__question">光は1秒間に地球を何周できる？</p>
+            <ul class="example-card__choices">
+              <li>約1周</li>
+              <li>約3周</li>
+              <li>約7.5周</li>
+              <li>約15周</li>
+            </ul>
+            <details class="example-card__answer">
+              <summary>答えを見る</summary>
+              <p class="example-card__correct">正解: 約7.5周</p>
+              <p class="example-card__explanation">光速は約30万km/秒。地球の赤道一周は約4万km。30万÷4万＝7.5周となる。</p>
+              <p class="example-card__source">出典: 国立天文台「光の速度」</p>
+            </details>
+          </article>
+
+          <article class="example-card">
+            <div class="example-card__meta">
+              <span class="badge badge--category">食べ物</span>
+              <span class="badge badge--difficulty">easy</span>
+            </div>
+            <p class="example-card__question">リンゴを水に入れると、どうなる？</p>
+            <ul class="example-card__choices">
+              <li>浮く</li>
+              <li>沈む</li>
+              <li>品種によって違う</li>
+              <li>水の温度による</li>
+            </ul>
+            <details class="example-card__answer">
+              <summary>答えを見る</summary>
+              <p class="example-card__correct">正解: 浮く</p>
+              <p class="example-card__explanation">リンゴの体積の約25%は空気。密度が水（1g/cm³）より小さい約0.8g/cm³のため、水に浮く。</p>
+              <p class="example-card__source">出典: 農研機構「果実の基礎知識」</p>
+            </details>
+          </article>
+
+          <article class="example-card">
+            <div class="example-card__meta">
+              <span class="badge badge--category">言葉</span>
+              <span class="badge badge--difficulty">normal</span>
+            </div>
+            <p class="example-card__question">「ありがとう」の語源は？</p>
+            <ul class="example-card__choices">
+              <li>「有り難し」</li>
+              <li>「在り方答え」</li>
+              <li>「歩み通う」</li>
+              <li>「愛理が十」</li>
+            </ul>
+            <details class="example-card__answer">
+              <summary>答えを見る</summary>
+              <p class="example-card__correct">正解: 「有り難し」</p>
+              <p class="example-card__explanation">「有り難し」は「存在することが難しい」→「めったにない」→「貴重だ」という意味の形容詞。元は感謝ではなく希少性を表す言葉だった。</p>
+              <p class="example-card__source">出典: 国立国語研究所／小学館「日本国語大辞典」</p>
+            </details>
+          </article>
+
         </div>
       </div>
     </section>
 
     <!-- ===== 画面イメージ ===== -->
-    <section class="section">
+    <section class="section" id="screens">
       <div class="container">
         <h2 class="section__title">画面イメージ</h2>
-        <p class="section__subtitle">開発中のイメージです。実際の画面と異なる場合があります。</p>
+        <p class="section__subtitle">開発中の画面です。実際の表示と異なる場合があります。</p>
         <div class="screenshot-grid">
           <div class="screenshot-item">
             <div class="phone-mock" role="img" aria-label="画面1：カテゴリと難易度を選ぶスタート画面">
@@ -147,9 +245,11 @@
               <div class="phone-mock__body">
                 <div class="phone-mock__body-title">カテゴリを選ぶ</div>
                 <div class="phone-mock__item phone-mock__item--checked">自然・地理</div>
-                <div class="phone-mock__item phone-mock__item--checked">歴史</div>
-                <div class="phone-mock__item">科学</div>
-                <div class="phone-mock__item">食べ物</div>
+                <div class="phone-mock__item phone-mock__item--checked">生物</div>
+                <div class="phone-mock__item">歴史</div>
+                <div class="phone-mock__item phone-mock__item--checked">食べ物</div>
+                <div class="phone-mock__item">言葉</div>
+                <div class="phone-mock__item">暮らし</div>
                 <div class="phone-mock__divider"></div>
                 <div class="phone-mock__label">難易度</div>
                 <div class="phone-mock__item phone-mock__item--checked">easy</div>
@@ -157,7 +257,7 @@
                 <div class="phone-mock__item">hard</div>
               </div>
             </div>
-            <p class="screenshot-item__desc">カテゴリと難易度を選んで、スタートします。複数カテゴリの組み合わせも可能です。</p>
+            <p class="screenshot-item__desc">カテゴリと難易度を選択する画面。</p>
           </div>
           <div class="screenshot-item">
             <div class="phone-mock" role="img" aria-label="画面2：4択クイズの回答画面">
@@ -167,17 +267,17 @@
                 <span>へぇの種</span>
               </div>
               <div class="phone-mock__body">
-                <div class="phone-mock__body-title">Q. 富士山の標高は？（歴史）</div>
-                <div class="phone-mock__item phone-mock__item--checked">3,776m</div>
-                <div class="phone-mock__item">2,000m</div>
-                <div class="phone-mock__item">5,000m</div>
-                <div class="phone-mock__item phone-mock__item--cross">8,848m</div>
+                <div class="phone-mock__body-title">Q. キリンの首の骨の数は？（生物）</div>
+                <div class="phone-mock__item phone-mock__item--checked">キリンの方が多い</div>
+                <div class="phone-mock__item">人間の方が多い</div>
+                <div class="phone-mock__item">実は同じ</div>
+                <div class="phone-mock__item phone-mock__item--cross">個体によって違う</div>
               </div>
             </div>
-            <p class="screenshot-item__desc">4つの選択肢から答えを選びます。選ぶとすぐに正解/不正解が表示されます。</p>
+            <p class="screenshot-item__desc">4択から選んで回答。すぐに正解がわかる。</p>
           </div>
           <div class="screenshot-item">
-            <div class="phone-mock" role="img" aria-label="画面3：解説カード画面">
+            <div class="phone-mock" role="img" aria-label="画面3：解説表示画面">
               <div class="phone-mock__notch"></div>
               <div class="phone-mock__header">
                 <span>9:41</span>
@@ -187,54 +287,57 @@
                 <div class="phone-mock__body-title">正解！</div>
                 <div class="phone-mock__complete">
                   <div class="phone-mock__complete-icon">&#x2705;</div>
-                  <div class="phone-mock__complete-title">3,776m</div>
-                  <div class="phone-mock__complete-count">解説: 富士山は標高3,776mで日本最高峰です。</div>
+                  <div class="phone-mock__complete-title">実は同じ（7個）</div>
+                  <div class="phone-mock__complete-count">キリンの首が長いのは骨の数ではなく、一つ一つの頸椎が長いため。</div>
                 </div>
               </div>
             </div>
-            <p class="screenshot-item__desc">正解/不正解の判定と解説を確認。知識として定着しやすくなっています。</p>
+            <p class="screenshot-item__desc">解説を読んで、知ったことを誰かに話したくなる。</p>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ===== 今後検討していること ===== -->
-    <section class="section section--surface">
+    <!-- ===== 正確性への取り組み ===== -->
+    <section class="section section--surface" id="accuracy">
       <div class="container">
-        <h2 class="section__title">今後検討していること</h2>
-        <p class="section__subtitle">初期版には含まれませんが、今後追加を検討している機能です。</p>
-        <div class="feature-grid">
-          <div class="feature-card">
-            <div class="feature-card__icon">&#x1F4C5;</div>
-            <h3 class="feature-card__title">今日の一問</h3>
-            <p class="feature-card__desc">毎日1問ずつ新しい問題に挑戦できるデイリークイズ。</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-card__icon">&#x1F51E;</div>
-            <h3 class="feature-card__title">連続正解数</h3>
-            <p class="feature-card__desc">連続で正解した数を記録。モチベーション維持に役立ちます。</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-card__icon">&#x2B50;</div>
-            <h3 class="feature-card__title">お気に入り</h3>
-            <p class="feature-card__desc">気に入った問題をお気に入りに登録。後で復習できます。</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-card__icon">&#x1F4CB;</div>
-            <h3 class="feature-card__title">履歴</h3>
-            <p class="feature-card__desc">過去に解いた問題と成績を確認。学習の進み具合を可視化。</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-card__icon">&#x1F4CA;</div>
-            <h3 class="feature-card__title">正答率</h3>
-            <p class="feature-card__desc">カテゴリごとの正答率を表示。苦手分野を把握できます。</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-card__icon">&#x2709;&#xFE0F;</div>
-            <h3 class="feature-card__title">問題リクエスト</h3>
-            <p class="feature-card__desc">ユーザーから問題のリクエストを受け付け、随時追加していく予定です。</p>
-          </div>
+        <h2 class="section__title">問題の正確性のために</h2>
+        <ul class="accuracy-list">
+          <li>各問題に出典・参考資料を記録しています。</li>
+          <li>問題文と解説は独自に編集し、可能な限り複数の資料で確認しています。</li>
+          <li>誤りを見つけた場合は、<a href="/apps/ehenotane/contact.html">お問い合わせページ</a>からご報告ください。確認の上、必要に応じて修正します。</li>
+          <li>可能な限り正確性を追求していますが、学術的な正確性を完全に保証するものではありません。雑学クイズとしてお楽しみください。</li>
+          <li>誇張した表現は避け、確認できた情報をもとに問題を作成しています。</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ===== 料金について ===== -->
+    <section class="section" id="pricing">
+      <div class="container">
+        <h2 class="section__title">料金について（予定）</h2>
+        <div class="pricing-content">
+          <p>基本機能は無料で提供する予定です。</p>
+          <p>広告なしの買い切り版や、テーマ別問題パックも将来検討しています。詳細はリリース時にお知らせします。</p>
         </div>
+      </div>
+    </section>
+
+    <!-- ===== 開発状況 ===== -->
+    <section class="section section--surface" id="status">
+      <div class="container">
+        <h2 class="section__title">開発状況</h2>
+        <dl class="status-list">
+          <dt>ステータス</dt>
+          <dd>準備中</dd>
+          <dt>公開時期</dt>
+          <dd>未定</dd>
+          <dt>プラットフォーム</dt>
+          <dd>Android（予定）</dd>
+          <dt>開発形態</dt>
+          <dd>個人開発</dd>
+        </dl>
+        <p class="status-note">現在、問題の作成とアプリの開発を進めています。</p>
       </div>
     </section>
 
@@ -242,7 +345,7 @@
     <section class="section" id="faq">
       <div class="container">
         <h2 class="section__title">よくある質問</h2>
-        <p class="section__subtitle">アプリの開発段階でいただくご質問をまとめました。</p>
+        <p class="section__subtitle section__subtitle--narrow">アプリの開発段階でいただくご質問をまとめました。</p>
         <div class="faq-list">
           <div class="faq-item">
             <p class="faq-item__q">Q：無料で使えますか？</p>
@@ -253,33 +356,29 @@
             <p class="faq-item__a">初期リリース時点で30問以上を収録する予定です。今後も定期的に問題を追加していく予定です。</p>
           </div>
           <div class="faq-item">
-            <p class="faq-item__q">Q：難易度は選べますか？</p>
-            <p class="faq-item__a">easy / normal / hard の3段階を用意する予定です。自分に合った難易度で楽しめます。</p>
+            <p class="faq-item__q">Q：間違っている問題を見つけたら？</p>
+            <p class="faq-item__a"><a href="/apps/ehenotane/contact.html">お問い合わせページ</a>からご報告ください。確認の上、必要に応じて修正します。</p>
           </div>
           <div class="faq-item">
             <p class="faq-item__q">Q：子どもでも使えますか？</p>
-            <p class="faq-item__a">対象年齢制限は設けない予定ですが、保護者の方の判断でお使いください。不適切な内容が含まれないよう運営に努めます。</p>
+            <p class="faq-item__a">対象年齢制限は設けない予定ですが、保護者の方の判断でお使いください。不適切な内容が含まれないよう配慮しています。</p>
           </div>
           <div class="faq-item">
-            <p class="faq-item__q">Q：出典はありますか？</p>
-            <p class="faq-item__a">一般的な知識を中心に出題する予定です。参考にした資料がある場合は問題に明記する方針です。可能な限り正確性を追求しますが、誤りが含まれる場合があります。</p>
-          </div>
-          <div class="faq-item">
-            <p class="faq-item__q">Q：間違っている問題を見つけたら？</p>
-            <p class="faq-item__a">お気づきの点はお問い合わせフォームからご報告ください。確認の上、適切なタイミングで修正します。</p>
+            <p class="faq-item__q">Q：出典はどこに載っていますか？</p>
+            <p class="faq-item__a">各問題の解説画面に参考資料・出典を明記する予定です。詳細はリリース時にお知らせします。</p>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ===== CTA ===== -->
-    <section class="section">
+    <!-- ===== 最終CTA ===== -->
+    <section class="section section--surface">
       <div class="container">
         <div class="cta-banner">
-          <h2 class="cta-banner__title">リリース情報をお届けします</h2>
-          <p class="cta-banner__desc">「へぇの種」のリリース情報や、開発状況のご案内をお送りします。要望・アイデアもお気軽にどうぞ。</p>
+          <h2 class="cta-banner__title">リリース通知をご希望ですか？</h2>
+          <p class="cta-banner__desc">リリース時の連絡をご希望の方は、メールでお知らせください。</p>
           <div class="cta-banner__actions">
-            <a href="mailto:kaenozu@gmail.com?subject=へぇの種のリリース情報について" class="btn btn--primary">リリース情報を受け取る</a>
+            <a href="mailto:kaenozu@gmail.com?subject=へぇの種のリリース通知を希望" class="btn btn--primary">リリース通知を希望する</a>
             <a href="mailto:kaenozu@gmail.com?subject=へぇの種への要望・アイデア" class="btn btn--outline">要望・アイデアを送る</a>
           </div>
         </div>
@@ -291,15 +390,17 @@
   <footer class="footer">
     <div class="container footer__inner">
       <nav class="footer__nav" aria-label="フッターナビゲーション">
-        <a href="/">トップページに戻る</a>
+        <a href="/apps/ehenotane/">へぇの種</a>
         <a href="/apps/ehenotane/privacy.html">プライバシーポリシー</a>
         <a href="/apps/ehenotane/terms.html">利用規約</a>
         <a href="/apps/ehenotane/contact.html">お問い合わせ</a>
+        <a href="/">小さなアプリ工房へ戻る</a>
       </nav>
       <p class="footer__copy">&copy; <span data-year></span> 小さなアプリ工房</p>
     </div>
   </footer>
 
   <script src="/assets/app.js"></script>
+  <script src="/apps/ehenotane/sample.js"></script>
 </body>
 </html>
