@@ -1,182 +1,203 @@
 # 小さなアプリ工房 — LPサイト
 
 生活、学び、遊び、仕事など、複数ジャンルの個人開発アプリを掲載するポータルです。
-ルートページはアプリ一覧、`/apps/{app-slug}/` は各アプリの専用LPとして運用します。
+ルートページはアプリ一覧、`/apps/{app-slug}/`は各アプリの専用LPとして運用します。
 
 > [!NOTE]
-> 「小さなアプリ工房」は仮名称です。公開前に最終確認し、必要に応じて変更してください。
+> 「小さなアプリ工房」は仮名称です。正式公開前に最終確認してください。
 
-## 配信前提
+## 公開環境
 
-このサイトは **Cloudflare Pages などでドメイン直下に公開する前提** で作られています。
-全ファイルの CSS/JS 参照は絶対パス（`/assets/styles.css`）で記述されています。
+- Production URL: `https://lp-5t7.pages.dev`
+- Cloudflare Pagesプロジェクト: `lp`
+- 配信方式: Direct Upload
+- Productionブランチ: `master`
+- 自動デプロイ: GitHub Actionsから`wrangler pages deploy`を実行
 
-### Cloudflare Pages 公開設定例
+このサイトはHTML / CSS / JavaScriptのみで構成され、アプリケーションビルドはありません。
+CSSやJavaScriptはドメインルート基準の絶対パスで参照しています。
 
-| 項目 | 設定値 |
-|---|---|
-| Framework preset | None |
-| Build command | （空） |
-| Build output directory | `/` |
-| Root directory | `/` |
+## デプロイ運用
 
-上記設定でリポジトリを接続するだけで公開できます。
+### Productionデプロイ
 
-### ローカル確認方法
+`master`へのpushで`.github/workflows/deploy.yml`が実行されます。
 
-HTML ファイルを直接ダブルクリックして開くのではなく、以下のように静的サーバーを起動して確認してください。
+ワークフローは次の順序で処理します。
+
+1. 公開専用ディレクトリ`_site/`を生成
+2. 公開対象だけを`_site/`へコピー
+3. Cloudflare Pagesプロジェクト`lp`へデプロイ
+4. Production主要URLをスモークテスト
+
+公開対象は次のファイルとディレクトリだけです。
+
+```text
+index.html
+robots.txt
+sitemap.xml
+assets/
+apps/
+```
+
+`.github/`、`README.md`、`docs/`などの開発・運用ファイルは配信しません。
+
+### GitHub Secrets
+
+リポジトリのActions Secretsに次の2件が必要です。
+
+```text
+CLOUDFLARE_API_TOKEN
+CLOUDFLARE_ACCOUNT_ID
+```
+
+Secretの値はREADME、Issue、PR、ログへ記載しないでください。
+
+### 手動実行
+
+`Deploy to Cloudflare Pages`は`workflow_dispatch`に対応しています。
+空コミットを作らず、GitHub Actions画面から手動実行できます。
+
+### PR検証
+
+サイトまたはワークフローを変更するPRでは、`.github/workflows/validate.yml`が公開物の構成を検証します。
+
+- 必須ファイルが`_site/`へコピーされること
+- `assets/`と`apps/`が含まれること
+- `.github/`と`README.md`が公開物へ混入しないこと
+
+GitHub Actionsの依存関係は`.github/dependabot.yml`で週次確認します。
+
+## ローカル確認
+
+HTMLファイルを直接開かず、リポジトリルートで静的サーバーを起動してください。
 
 ```bash
-# Python 3 を使う場合
 python -m http.server 8123
 ```
 
-表示後、ブラウザで `http://localhost:8123` にアクセスしてください。
+ブラウザで`http://localhost:8123`へアクセスします。
 
 ## ファイル構成
 
-```
+```text
 /
-├── index.html                          # ルートページ（アプリ一覧）
-├── README.md                           # このファイル
+├── .github/
+│   ├── dependabot.yml                   # GitHub Actions依存更新
+│   └── workflows/
+│       ├── deploy.yml                   # master→Cloudflare Pages Production
+│       └── validate.yml                 # PR用公開物検証
+├── index.html                           # ポータル
+├── robots.txt                           # クロール設定
+├── sitemap.xml                          # 公開URL一覧
+├── README.md                            # このファイル
 ├── assets/
-│   ├── styles.css                      # 共通CSS
-│   ├── app.js                          # JavaScript（年表示のみ）
-│   ├── favicon.png                     # ファビコン（仮）
-│   ├── ogp.png                         # OGP画像（ルートページ用、仮）
-│   ├── ogp-ashita-motsumono.png        # OGP画像（あしたもつもの用、仮）
-│   └── ogp-ehenotane.png               # OGP画像（へぇの種用、仮）
-└── apps/
-    ├── ashita-motsumono/
-    │   ├── index.html                  # アプリ紹介LP
-    │   ├── privacy.html                # プライバシーポリシー
-    │   ├── terms.html                  # 利用規約
-    │   └── contact.html                # お問い合わせ
-    └── ehenotane/
-        ├── index.html                  # アプリ紹介LP
-        ├── privacy.html                # プライバシーポリシー
-        ├── terms.html                  # 利用規約
-        └── contact.html                # お問い合わせ
+│   ├── styles.css                       # 共通CSS
+│   ├── app.js                           # 共通JavaScript
+│   ├── favicon.png                      # ファビコン（仮）
+│   ├── ogp.png                          # ポータルOGP（仮）
+│   ├── ogp-ashita-motsumono.png         # あしたもつものOGP（仮）
+│   └── ogp-ehenotane.png                # へぇの種OGP（仮）
+├── apps/
+│   ├── ashita-motsumono/
+│   │   ├── index.html
+│   │   ├── privacy.html
+│   │   ├── terms.html
+│   │   └── contact.html
+│   └── ehenotane/
+│       ├── index.html
+│       ├── privacy.html
+│       ├── terms.html
+│       └── contact.html
+└── docs/
+    ├── app-lp-template.md
+    └── new-app-checklist.md
 ```
 
-## 技術スタック
+## URLルール
 
-- HTML / CSS / JavaScript（外部ライブラリ不使用）
+公開URLはextensionless形式へ統一します。
+
+```text
+/apps/{slug}/privacy
+/apps/{slug}/terms
+/apps/{slug}/contact
+```
+
+リポジトリ内の実ファイル名は`privacy.html`、`terms.html`、`contact.html`のまま維持します。
+内部リンク、`canonical`、`og:url`、`sitemap.xml`には`.html`を含めません。
+
+## 技術方針
+
+- HTML / CSS / JavaScript
+- 外部フロントエンドライブラリなし
 - モバイルファースト
-- アクセシビリティ対応（`:focus-visible`, `aria-label`, `prefers-reduced-motion`）
-- SEO メタタグ（title, description, OGP, Twitter Card, canonical）対応済み
+- `:focus-visible`、`aria-label`、`prefers-reduced-motion`対応
+- title、description、OGP、Twitter Card、canonical対応
+- robots.txt / sitemap.xml対応
 
-## 新アプリの追加方法
+## 新アプリの追加
 
-新アプリを増やす場合は、必ず `docs/app-lp-template.md` と `docs/new-app-checklist.md` を参照してください。
+新アプリを追加する場合は、`docs/app-lp-template.md`と`docs/new-app-checklist.md`を参照してください。
 
-### ルートページへのカード追加
+### ルートカード
 
-`index.html` の `.card-grid` にカードを追加します。
+- 個別LPあり: `<a href="/apps/{slug}/" class="card card--block">...</a>`
+- 構想中: `<div class="card card--disabled">...</div>`
 
-- 公開済み：`<a href="/apps/{slug}/" class="card card--block">...</a>`
-- 構想中：`<div class="card card--disabled">...</div>`
+構想中カードにはリンクを付けません。
+仕様未確定の機能を説明文で確定させないでください。
 
-構想中のアプリは `card--disabled` を使い、リンクなしで表示します。
+凍結したプロジェクトは、過去資料やGit履歴を削除せず、公開中のアプリ一覧から外します。
 
-### ディレクトリ構成ルール
+### アプリディレクトリ
 
-各アプリは `apps/{slug}/` に配置し、以下の4ファイルを必ず作成します。
+各アプリは`apps/{slug}/`へ配置します。
 
-- `index.html`：アプリ紹介LP
-- `privacy.html`：プライバシーポリシー
-- `terms.html`：利用規約
-- `contact.html`：お問い合わせ
+```text
+index.html
+privacy.html
+terms.html
+contact.html
+```
 
-### OGP画像の命名規則
+新しい公開URLを追加した場合は、次も更新します。
 
-OGP画像は必ず `assets/ogp-{slug}.png` と命名し、サイズは 1200×630 の PNG で作成してください。
+- ルートページのカード
+- フッター導線
+- `sitemap.xml`
+- 必要に応じてOGP画像
+- Productionスモークテスト対象
 
-## 公開前チェックリスト
+## 公開・運用チェックリスト
 
-本番公開前に、以下の項目を確認・修正してください。
+### 完了済み
 
-### ドメイン・メタ情報
+- [x] Production URLで公開
+- [x] canonicalと`og:url`をProductionのextensionless URLへ統一
+- [x] robots.txtへsitemapを指定
+- [x] sitemap.xmlへ公開9 URLを掲載
+- [x] GitHub ActionsからCloudflare Pagesへデプロイする構成を追加
+- [x] 公開専用ディレクトリ`_site/`を使用
+- [x] Production主要URLのスモークテストを追加
+- [x] GitHub Actionsをフルcommit SHAへ固定
+- [x] Dependabotを設定
 
-- [ ] 本番ドメインを設定する（Cloudflare Pages のカスタムドメイン）
-- [ ] `og:url` を本番ドメインに変更する（全ページ）
-- [ ] `canonical` を本番ドメインに変更する（全ページ）
-- [ ] `og:image` の画像を本番ドメインのものに変更する（全ページ）
-- [ ] Google Search Console に登録する
+### 継続確認
 
-### 画像・アイコン
+- [ ] GitHub ActionsのProductionデプロイ成功を確認し、Issue #2をClose
+- [ ] 正式なサービス名を確定
+- [ ] カスタムドメインの要否を決定
+- [ ] Google Search Consoleへ登録
+- [ ] 正式faviconへ差し替え
+- [ ] 正式OGP画像へ差し替え
+- [ ] アプリ画面を実機スクリーンショットへ差し替え
+- [ ] 問い合わせメールアドレスを正式確認
+- [ ] 法務ページをリリース時の実装・外部サービスに合わせて確定
+- [ ] App Store / Google Play公開後にストアURLを追加
+- [ ] LighthouseをProductionで測定
+- [ ] スマホ・タブレット・キーボード操作をリリースごとに確認
 
-- [ ] favicon を正式版アイコンに差し替える
-  - 現在: `assets/favicon.png`（64×64, 506B, 仮画像）
-  - 推奨: 32×32 または 192×192 の PNG、あるいは `.ico` 形式
-- [ ] OGP画像（ルートページ用）を正式版に差し替える
-  - 現在: `assets/ogp.png`（1200×630, 6KB, 仮画像）
-  - サイズは適正だが6KBと小さいため、正式版では品質を確保すること
-- [ ] OGP画像（アプリLP用）を正式版に差し替える
-  - 現在: `assets/ogp-ashita-motsumono.png`（1200×630, 8KB, 仮画像）
-  - サイズは適正だが8KBと小さいため、正式版では品質を確保すること
-- [ ] スマホモックを実機スクリーンショットに差し替える
+## 関連Issue
 
-  **必要なスクリーンショット一覧:**
-  | # | 画面内容 | 現在の箇所 | 推奨サイズ |
-  |---|---|---|---|
-  | 1 | 明日の持ち物一覧 | `apps/ashita-motsumono/index.html` の `.screenshot-grid` 1つ目 | 1170×2532（iPhone相当）または画面比率に合わせて |
-  | 2 | 提出物チェック | `.screenshot-grid` 2つ目 | 同上 |
-  | 3 | 準備完了画面 | `.screenshot-grid` 3つ目 | 同上 |
-
-  **差し替え手順:**
-  1. 実機（iOS/Android）でスクリーンショットを撮影
-  2. `assets/screenshots/` ディレクトリを作成し、画像を配置
-  3. `.phone-mock` ブロックを `<img>` タグに置き換え
-  4. 各画像に適切な `alt` 属性を設定（例: `alt="あしたもつもの 持ち物一覧画面のスクリーンショット"`）
-  5. ヘッダーの `9:41` などの固定表示は不要になる
-
-  **alt文言の方針:**
-  - 画面の目的を簡潔に（例: 「明日の持ち物一覧画面」「提出物チェック画面」）
-  - 「スクリーンショット」の語を含める
-  - スクリーンリーダー利用者に不足情報が伝わるようにする
-
-### お問い合わせ
-
-- [ ] 問い合わせメールアドレスを本番用に変更する（`mailto:` リンク全般）
-- [ ] `privacy.html` / `terms.html` / `contact.html` のお問い合わせ表記を正式化する
-
-### 法務ページ
-
-- [ ] `privacy.html` を正式化する
-  - 「外部サービスが確定した際は本ページに追記します」の箇所を、実際に利用するサービス名に書き換える
-  - サービスが未確定の場合はそのままでもよいが、リリース時までには確定させる
-- [ ] `terms.html` を正式化する
-  - リリース日前後に「初版制定日」を更新する
-  - 必要に応じて管轄裁判所などを追記する
-
-### ストア情報
-
-- [ ] App Store URL を追加する（リリース後）
-- [ ] Google Play URL を追加する（リリース後）
-- [ ] ストア未公開のまま「ダウンロード」ボタンを表示しないことを確認する
-
-### 外部サービス
-
-- [ ] 実際に利用する外部サービス（Firebase Analytics、Crashlytics、AdMob など）の有無を確認する
-- [ ] 利用する場合は `privacy.html` にサービス名・提供元・取得データ・目的を明記する
-- [ ] 利用しない場合は「利用する場合があります」の表現を削除または調整する
-
-### 表示確認
-
-- [ ] スマホ表示でナビゲーションとCTAが自然に表示されることを確認する
-- [ ] タブレット表示で崩れがないことを確認する
-- [ ] OGPプレビュー（Facebook Sharing Debugger / Twitter Card Validator）で正しく表示されることを確認する
-- [ ] フォーカス移動（Tabキー操作）で全リンク・ボタンにフォーカスが当たることを確認する
-- [ ] ダークモードで最低限読めることを確認する（`prefers-color-scheme` 未対応の場合は白背景が維持されることを確認）
-- [ ] Lighthouseで品質を確認する
-  - ローカルサーバー起動後、Chrome DevTools → Lighthouse で測定
-  - 確認項目: Performance / Accessibility / Best Practices / SEO
-  - 目標スコア: SEO 90+, Accessibility 90+, Best Practices 80+
-  - 注意: 現状未測定。Cloudflare Pages 公開後にも再測定推奨
-
-### コンテンツ
-
-- [ ] 固定日付（「7月9日」など）が残っていないことを確認する
-- [ ] 仮情報（`example.com` など）が残っていないことを確認する
-- [ ] 誇大表現（「完全に防ぐ」「必ず」など）が残っていないことを確認する
+Cloudflareの旧Workers Builds誤接続と、自動Productionデプロイの最終確認はIssue #2で追跡しています。
