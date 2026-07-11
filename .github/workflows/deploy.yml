@@ -1,13 +1,14 @@
-# C:\gemini-desktop\LP\.github\workflows\deploy.yml
 # masterブランチへのプッシュ時にCloudflare Pagesへ自動デプロイ
-# wrangler pages deploy を CI から実行する（Direct Upload方式）
-# 関連: .github/workflows/deploy.yml, wrangler不要（静的サイト）
+# Direct Upload方式のPagesプロジェクトへWrangler経由で配信する
 
 name: Deploy to Cloudflare Pages
 
 on:
   push:
     branches: [master]
+
+permissions:
+  contents: read
 
 jobs:
   deploy:
