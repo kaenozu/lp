@@ -1231,6 +1231,12 @@ button:focus-visible,
 }
 
 /* ===== Source Links ===== */
+.quiz-card__source,
+.example-card__source {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .quiz-card__source a,
 .example-card__source a {
   color: var(--color-muted);
@@ -1244,6 +1250,13 @@ button:focus-visible,
 .example-card__source a:hover {
   color: var(--color-primary-dark);
   text-decoration-color: var(--color-primary-dark);
+}
+
+.quiz-card__source a:focus-visible,
+.example-card__source a:focus-visible {
+  outline: 3px solid var(--color-primary-dark);
+  outline-offset: 3px;
+  border-radius: 2px;
 }
 
 .quiz-card__source a::after,
@@ -1447,7 +1460,7 @@ button:focus-visible,
 }
 
 @media (max-width: 599px) {
-  .badge--status {
+  .header__status {
     display: none;
   }
 

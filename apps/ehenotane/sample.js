@@ -8,12 +8,10 @@
   "use strict";
 
   var quizData = {
-    correctIndex: 2,
-    correctText: "実は同じ（7個）",
+    correctIndex: 1,
+    correctText: "7個",
     explanation:
-      "キリンも人間も、通常は首の骨である頸椎が7個あります。キリンの首が長いのは、骨の数が多いからではなく、一つ一つの頸椎が長いためです。",
-    source:
-      '出典: <a href="https://www.toyo.ac.jp/link-toyo/life/giraffe" target="_blank" rel="noopener noreferrer">東洋大学 リンク東洋「キリンと頸椎」</a>／国立科学博物館「動物の骨格」',
+      "キリンの頸椎は通常7個です。首が長いのは骨の数が多いからではなく、一つ一つの頸椎が長いためです。",
     category: "生物",
     difficulty: "easy",
   };
@@ -24,7 +22,6 @@
   var answerEl = document.getElementById("answerText");
   var explanationEl = document.getElementById("explanationText");
   var metaEl = document.getElementById("metaInfo");
-  var sourceEl = document.getElementById("sourceText");
   var answered = false;
 
   if (!choices.length || !resultArea) return;
@@ -35,7 +32,6 @@
 
     choices.forEach(function (btn) {
       btn.disabled = true;
-      btn.setAttribute("aria-disabled", "true");
       var idx = parseInt(btn.getAttribute("data-index"), 10);
       if (idx === quizData.correctIndex) {
         btn.classList.add("quiz-card__choice--correct");
@@ -54,23 +50,15 @@
     answerEl.textContent = "正解: " + quizData.correctText;
     explanationEl.textContent = quizData.explanation;
     metaEl.textContent = "カテゴリ: " + quizData.category + "　難易度: " + quizData.difficulty;
-    sourceEl.innerHTML = quizData.source;
 
     resultArea.hidden = false;
+    resultArea.focus();
   }
 
   choices.forEach(function (btn) {
     btn.addEventListener("click", function () {
       var idx = parseInt(btn.getAttribute("data-index"), 10);
       handleAnswer(idx);
-    });
-
-    btn.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        var idx = parseInt(btn.getAttribute("data-index"), 10);
-        handleAnswer(idx);
-      }
     });
   });
 })();

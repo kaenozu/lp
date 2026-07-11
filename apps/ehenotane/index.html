@@ -20,7 +20,7 @@
   <header class="header">
     <div class="container header__inner">
       <a href="/apps/ehenotane/" class="header__logo">へぇの種</a>
-      <span class="badge badge--status">準備中</span>
+      <span class="badge badge--status header__status">準備中</span>
       <nav class="header__nav" aria-label="メインナビゲーション">
         <a href="#sample-quiz">1問試す</a>
         <a href="#values">アプリの紹介</a>
@@ -52,20 +52,27 @@
         <p class="section__subtitle section__subtitle--narrow">1問答えるだけで、「へぇの種」がどんなアプリかわかります。</p>
         <div class="quiz-card" role="region" aria-label="サンプルクイズ">
           <div class="quiz-card__question">
-            <p>Q. キリンと人間、首の骨の数はどちらが多い？</p>
+            <p>Q. キリンの首の骨である頸椎は、通常いくつある？</p>
           </div>
           <div class="quiz-card__choices">
-            <button type="button" class="quiz-card__choice" data-index="0">キリンの方が多い</button>
-            <button type="button" class="quiz-card__choice" data-index="1">人間の方が多い</button>
-            <button type="button" class="quiz-card__choice" data-index="2">実は同じ</button>
-            <button type="button" class="quiz-card__choice" data-index="3">個体によって違う</button>
+            <button type="button" class="quiz-card__choice" data-index="0">5個</button>
+            <button type="button" class="quiz-card__choice" data-index="1">7個</button>
+            <button type="button" class="quiz-card__choice" data-index="2">12個</button>
+            <button type="button" class="quiz-card__choice" data-index="3">24個</button>
           </div>
           <div class="quiz-card__result" aria-live="polite" tabindex="-1" hidden>
             <div class="quiz-card__verdict" id="verdict"></div>
             <p class="quiz-card__answer" id="answerText"></p>
             <p class="quiz-card__explanation" id="explanationText"></p>
             <div class="quiz-card__meta" id="metaInfo"></div>
-            <p class="quiz-card__source" id="sourceText"></p>
+            <p class="quiz-card__source">
+              出典:
+              <a href="https://arxiv.org/abs/1209.5439"
+                 target="_blank"
+                 rel="noopener noreferrer">
+                Taylor &amp; Wedel &ldquo;Why sauropods had long necks; and why giraffes have short necks&rdquo;
+              </a>
+            </p>
             <a href="#examples" class="btn btn--outline quiz-card__examples-link">他の問題例を見る &rarr;</a>
           </div>
           <noscript>
@@ -111,18 +118,18 @@
               <span class="badge badge--category">自然・地理</span>
               <span class="badge badge--difficulty">normal</span>
             </div>
-            <p class="example-card__question">世界で最も面積が広い砂漠はどこ？</p>
+            <p class="example-card__question">南極が「白い砂漠」と呼ばれる主な理由は？</p>
             <ul class="example-card__choices">
-              <li>サハラ砂漠</li>
-              <li>ゴビ砂漠</li>
-              <li>南極</li>
-              <li>アラビア砂漠</li>
+              <li>白い砂が広がっているから</li>
+              <li>年間降水量が非常に少ないから</li>
+              <li>植物がすべて白いから</li>
+              <li>昼間が一年中続くから</li>
             </ul>
             <details class="example-card__answer">
               <summary>答えを見る</summary>
-              <p class="example-card__correct">正解: 南極</p>
-              <p class="example-card__explanation">砂漠は、降水量が非常に少ない地域を指します。南極は氷で覆われていますが、降水量が少ないため、気候上は世界最大の砂漠とされます。</p>
-              <p class="example-card__source">出典: <a href="https://www.env.go.jp/nature/nankyoku/kankyohogo/nankyoku_kids/donnatokoro/donnatokoro/sabaku.html" target="_blank" rel="noopener noreferrer">環境省 南極キッズ「南極は白い砂漠」</a></p>
+              <p class="example-card__correct">正解: 年間降水量が非常に少ないから</p>
+              <p class="example-card__explanation">南極の内陸では、年間降水量が約50mmと非常に少ない地域があります。そのため、氷に覆われていても「白い砂漠」と呼ばれます。</p>
+              <p class="example-card__source">出典: <a href="https://www.env.go.jp/nature/nankyoku/kankyohogo/nankyoku_kids/donnatokoro/donnatokoro/sabaku.html" target="_blank" rel="noopener noreferrer">環境省 南極キッズ「白い砂漠」</a></p>
             </details>
           </article>
 
@@ -142,27 +149,27 @@
               <summary>答えを見る</summary>
               <p class="example-card__correct">正解: 黒</p>
               <p class="example-card__explanation">ホッキョクグマの毛は白く見えますが、皮膚は黒色です。毛が光を散乱することで、全体が白く見えます。</p>
-              <p class="example-card__source">出典: <a href="https://blog.miraikan.jst.go.jp/articles/20131219post-231.html" target="_blank" rel="noopener noreferrer">日本科学未来館ブログ「シロクマのヒミツ」</a>／WWFジャパン「ホッキョクグマ」</p>
+              <p class="example-card__source">出典: <a href="https://blog.miraikan.jst.go.jp/articles/20131219post-231.html" target="_blank" rel="noopener noreferrer">日本科学未来館「ホッキョクグマの肌は真っ黒で、毛は透明なストロー。」</a></p>
             </details>
           </article>
 
           <article class="example-card">
             <div class="example-card__meta">
               <span class="badge badge--category">歴史</span>
-              <span class="badge badge--difficulty">hard</span>
+              <span class="badge badge--difficulty">normal</span>
             </div>
-            <p class="example-card__question">大坂城の巨石「蛸石」の重さは、およそどれくらい？</p>
+            <p class="example-card__question">現在の大阪城天守閣は、歴代で何代目？</p>
             <ul class="example-card__choices">
-              <li>約1トン</li>
-              <li>約15トン</li>
-              <li>約130トン</li>
-              <li>約500トン</li>
+              <li>初代</li>
+              <li>2代目</li>
+              <li>3代目</li>
+              <li>5代目</li>
             </ul>
             <details class="example-card__answer">
               <summary>答えを見る</summary>
-              <p class="example-card__correct">正解: 約130トン</p>
-              <p class="example-card__explanation">蛸石は大坂城の桜門枡形にある巨石です。表面積が非常に大きく、重さは約130トンとされています。</p>
-              <p class="example-card__source">出典: <a href="http://osakacastle.net" target="_blank" rel="noopener noreferrer">大阪城天守閣 公式サイト</a></p>
+              <p class="example-card__correct">正解: 3代目</p>
+              <p class="example-card__explanation">現在の大阪城天守閣は、豊臣時代、徳川時代に続く3代目です。1931年に市民の寄付によって復興されました。</p>
+              <p class="example-card__source">出典: <a href="https://osakacastle.net/" target="_blank" rel="noopener noreferrer">大阪城天守閣 公式サイト</a></p>
             </details>
           </article>
 
@@ -182,7 +189,7 @@
               <summary>答えを見る</summary>
               <p class="example-card__correct">正解: 稲妻の方が高い</p>
               <p class="example-card__explanation">稲妻の通り道は瞬間的に約3万度に達することがあります。太陽の表面温度は約5500度です。</p>
-              <p class="example-card__source">出典: <a href="https://natgeo.nikkeibp.co.jp/nng/article/news/14/5777/" target="_blank" rel="noopener noreferrer">日経ナショナル ジオグラフィック「雷、地球の巨大エネルギー」</a></p>
+              <p class="example-card__source">出典: <a href="https://www.weather.gov/safety/lightning-science-thunder" target="_blank" rel="noopener noreferrer">National Weather Service &ldquo;Understanding Lightning: Thunder&rdquo;</a></p>
             </details>
           </article>
 
@@ -191,18 +198,18 @@
               <span class="badge badge--category">食べ物</span>
               <span class="badge badge--difficulty">easy</span>
             </div>
-            <p class="example-card__question">水を入れた容器にリンゴを入れると、通常どうなる？</p>
+            <p class="example-card__question">世界で最も多く栽培されているリンゴの品種は？</p>
             <ul class="example-card__choices">
-              <li>浮く</li>
-              <li>沈む</li>
-              <li>必ず半分に割れる</li>
-              <li>水が温かいと沈む</li>
+              <li>ふじ</li>
+              <li>王林</li>
+              <li>紅玉</li>
+              <li>つがる</li>
             </ul>
             <details class="example-card__answer">
               <summary>答えを見る</summary>
-              <p class="example-card__correct">正解: 浮く</p>
-              <p class="example-card__explanation">リンゴの内部には空気を含む部分があり、全体の平均密度が水より小さいため、通常は水に浮きます。</p>
-              <p class="example-card__source">出典: <a href="https://www.naro.go.jp/publicity_report/season/136677.html" target="_blank" rel="noopener noreferrer">農研機構「果実の基礎知識」</a></p>
+              <p class="example-card__correct">正解: ふじ</p>
+              <p class="example-card__explanation">農研機構によると、「ふじ」は2001年時点の主要生産国の統計で、世界で最も栽培されているリンゴ品種と確認されています。</p>
+              <p class="example-card__source">出典: <a href="https://www.naro.go.jp/publicity_report/season/136677.html" target="_blank" rel="noopener noreferrer">農研機構「楽しく味わう! リンゴ学」</a></p>
             </details>
           </article>
 
@@ -221,8 +228,8 @@
             <details class="example-card__answer">
               <summary>答えを見る</summary>
               <p class="example-card__correct">正解: 有り難し</p>
-              <p class="example-card__explanation">「有り難し」は、本来「存在することが難しい」「めったにない」という意味でした。そこから、貴重で感謝すべきことを表す言葉になりました。</p>
-              <p class="example-card__source">出典: <a href="https://gogen-yurai.jp/arigatou/" target="_blank" rel="noopener noreferrer">語源由来辞典「ありがとう」</a>／国立国語研究所／小学館「日本国語大辞典」</p>
+              <p class="example-card__explanation">「ありがとう」は、形容詞「有り難し」の連用形「有り難く」がウ音便化した言葉です。</p>
+              <p class="example-card__source">出典: <a href="https://gogen-yurai.jp/arigatou/" target="_blank" rel="noopener noreferrer">語源由来辞典「有難う／ありがとう」</a></p>
             </details>
           </article>
 
@@ -268,11 +275,11 @@
                 <span>へぇの種</span>
               </div>
               <div class="phone-mock__body">
-                <div class="phone-mock__body-title">Q. キリンの首の骨の数は？（生物）</div>
-                <div class="phone-mock__item phone-mock__item--cross">キリンの方が多い</div>
-                <div class="phone-mock__item">人間の方が多い</div>
-                <div class="phone-mock__item phone-mock__item--checked">実は同じ</div>
-                <div class="phone-mock__item">個体によって違う</div>
+                <div class="phone-mock__body-title">Q. キリンの頸椎はいくつ？（生物）</div>
+                <div class="phone-mock__item phone-mock__item--cross">5個</div>
+                <div class="phone-mock__item phone-mock__item--checked">7個</div>
+                <div class="phone-mock__item">12個</div>
+                <div class="phone-mock__item">24個</div>
               </div>
             </div>
             <p class="screenshot-item__desc">4択から選んで回答。すぐに正解がわかる。</p>
@@ -288,8 +295,8 @@
                 <div class="phone-mock__body-title">正解！</div>
                 <div class="phone-mock__complete">
                   <div class="phone-mock__complete-icon">&#x2705;</div>
-                  <div class="phone-mock__complete-title">実は同じ（7個）</div>
-                  <div class="phone-mock__complete-count">キリンの首が長いのは骨の数ではなく、一つ一つの頸椎が長いため。</div>
+                  <div class="phone-mock__complete-title">7個</div>
+                  <div class="phone-mock__complete-count">キリンの頸椎は通常7個。首が長いのは骨の数ではなく、一つ一つの頸椎が長いため。</div>
                 </div>
               </div>
             </div>
