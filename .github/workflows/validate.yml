@@ -1,0 +1,40 @@
+name: Validate site artifact
+
+on:
+  pull_request:
+    paths:
+      - "index.html"
+      - "robots.txt"
+      - "sitemap.xml"
+      - "assets/**"
+      - "apps/**"
+      - ".github/workflows/**"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Prepare and validate site artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf _site
+          mkdir -p _site
+          cp index.html robots.txt sitemap.xml _site/
+          cp -R assets apps _site/
+
+          test -f _site/index.html
+          test -f _site/robots.txt
+          test -f _site/sitemap.xml
+          test -d _site/assets
+          test -d _site/apps
+          test ! -e _site/.github
+          test ! -e _site/README.md
