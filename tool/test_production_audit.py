@@ -61,7 +61,8 @@ class ProductionAuditTest(unittest.TestCase):
             'javascript-disabled.html',
         ):
             self.assertIn(evidence, self.workflow)
-        self.assertIn('--blink-settings=scriptEnabled=false', self.workflow)
+        self.assertIn('curl \\', self.workflow)
+        self.assertIn('test -s "$output_dir/javascript-disabled.html"', self.workflow)
         self.assertIn('loading="eager"', self.workflow)
         self.assertIn('loading="lazy"', self.workflow)
         self.assertIn('fetchpriority="high"', self.workflow)

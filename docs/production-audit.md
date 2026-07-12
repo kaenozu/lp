@@ -12,13 +12,13 @@ Production URL `https://lp-5t7.pages.dev/apps/ashita-motsumono/` の表示とLig
 
 ## ブラウザ確認
 
-GitHub-hosted runnerのChromeを使用して、次を確認します。
+GitHub-hosted runnerのChromeとProductionから直接取得したHTMLを使用して、次を確認します。
 
-- JavaScript有効時に実装画面4点（先頭1点＋下部3点）が表示される
+- JavaScript実行後に実装画面4点（先頭1点＋下部3点）が表示される
 - 先頭画像が`loading="eager"`かつ`fetchpriority="high"`である
 - 下部画像が`loading="lazy"`である
-- JavaScript無効時にHTML製の`phone-mock`4点が残る
-- JavaScript無効時に実画面画像が注入されない
+- スクリプトを実行していない配信HTMLに`phone-mock`4点が残る
+- スクリプトを実行していない配信HTMLに実画面画像が注入されていない
 
 次の表示証跡をPNGで保存します。
 
@@ -49,7 +49,8 @@ Actions artifact `production-lp-audit`へ次を30日間保存します。
 - デスクトップLighthouse HTML / JSON
 - `lighthouse-summary.json`
 - Chromeスクリーンショット
-- JavaScript有効・無効時のDOM
+- JavaScript実行後のDOM
+- スクリプト未実行の配信HTML
 
 Lighthouseレポートは`filesystem`へ出力し、外部の一時公開ストレージへアップロードしません。
 

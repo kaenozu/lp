@@ -97,15 +97,24 @@ jobs:
           grep -q 'loading="lazy"' "$output_dir/javascript-enabled.html"
           grep -q 'fetchpriority="high"' "$output_dir/javascript-enabled.html"
 
-          "$CHROME_PATH" "${common_flags[@]}" \
-            --blink-settings=scriptEnabled=false \
-            --dump-dom "$TARGET_URL" \
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --location \
+            --retry 2 \
+            --retry-delay 1 \
+            --retry-all-errors \
+            --connect-timeout 5 \
+            --max-time 15 \
+            "$TARGET_URL" \
             > "$output_dir/javascript-disabled.html"
+          test -s "$output_dir/javascript-disabled.html"
 
           fallback_count="$(grep -o 'class="phone-mock"' "$output_dir/javascript-disabled.html" | wc -l)"
           test "$fallback_count" -eq 4
           if grep -q 'class="real-app-screen"' "$output_dir/javascript-disabled.html"; then
-            echo "::error::Real screenshots were injected while JavaScript was disabled"
+            echo "::error::Real screenshots were present in the served HTML fallback"
             exit 1
           fi
 
