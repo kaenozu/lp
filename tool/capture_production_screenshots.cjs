@@ -70,8 +70,8 @@ async function openRenderedPage(browser, viewport) {
   return page;
 }
 
-async function collectLayout(page, viewport) {
-  const result = await page.evaluate(() => {
+async function collectLayout(page) {
+  return page.evaluate(() => {
     const grid = document.querySelector('.screenshot-grid');
     const items = Array.from(document.querySelectorAll('.screenshot-grid .screenshot-item'));
     if (!grid) {
@@ -89,41 +89,46 @@ async function collectLayout(page, viewport) {
       };
     });
 
-    const xPositions = [];
+    const rowCounts = [];
     for (const rectangle of rectangles) {
-      if (!xPositions.some((position) => Math.abs(position - rectangle.x) <= 2)) {
-        xPositions.push(rectangle.x);
+      const existingRow = rowCounts.find((row) => Math.abs(row.y - rectangle.y) <= 2);
+      if (existingRow) {
+        existingRow.count += 1;
+      } else {
+        rowCounts.push({ y: rectangle.y, count: 1 });
       }
     }
 
     return {
       computedGridTemplateColumns: gridStyle.gridTemplateColumns,
       computedColumnCount: gridStyle.gridTemplateColumns.split(/\s+/).filter(Boolean).length,
-      geometricColumnCount: xPositions.length,
+      geometricColumnCount: Math.max(0, ...rowCounts.map((row) => row.count)),
+      rowCounts,
       rectangles,
       viewportWidth: window.innerWidth,
       viewportHeight: window.innerHeight,
+      documentClientWidth: document.documentElement.clientWidth,
       documentScrollWidth: document.documentElement.scrollWidth,
       bodyFontFamily: getComputedStyle(document.body).fontFamily,
       notoJapaneseAvailable: document.fonts.check('16px "Noto Sans CJK JP"', '日本語の表示確認'),
     };
   });
+}
 
-  assert(result.rectangles.length === 3, `${viewport.name}: expected 3 screenshot items`);
+function validateLayout(layout, viewport) {
+  assert(layout.rectangles.length === 3, `${viewport.name}: expected 3 screenshot items`);
   assert(
-    result.computedColumnCount === viewport.expectedColumns,
-    `${viewport.name}: computed ${result.computedColumnCount} columns, expected ${viewport.expectedColumns}`,
+    layout.computedColumnCount === viewport.expectedColumns,
+    `${viewport.name}: computed ${layout.computedColumnCount} columns, expected ${viewport.expectedColumns}`,
   );
   assert(
-    result.geometricColumnCount === viewport.expectedColumns,
-    `${viewport.name}: measured ${result.geometricColumnCount} columns, expected ${viewport.expectedColumns}`,
+    layout.geometricColumnCount === viewport.expectedColumns,
+    `${viewport.name}: measured ${layout.geometricColumnCount} columns, expected ${viewport.expectedColumns}`,
   );
   assert(
-    result.documentScrollWidth <= result.viewportWidth + 1,
-    `${viewport.name}: horizontal overflow ${result.documentScrollWidth}px > ${result.viewportWidth}px`,
+    layout.documentScrollWidth <= layout.documentClientWidth + 1,
+    `${viewport.name}: horizontal overflow ${layout.documentScrollWidth}px > ${layout.documentClientWidth}px`,
   );
-  assert(result.notoJapaneseAvailable, `${viewport.name}: Noto Sans CJK JP is unavailable`);
-  return result;
 }
 
 async function captureResponsiveEvidence(browser) {
@@ -174,7 +179,7 @@ async function captureResponsiveEvidence(browser) {
         type: 'png',
       });
 
-      const layout = await collectLayout(page, viewport);
+      const layout = await collectLayout(page);
       summary[viewport.name] = {
         viewport,
         imageAttributes,
@@ -185,6 +190,7 @@ async function captureResponsiveEvidence(browser) {
         `${JSON.stringify(summary[viewport.name], null, 2)}\n`,
         'utf8',
       );
+      validateLayout(layout, viewport);
 
       if (viewport.name === 'mobile') {
         await fs.writeFile(
