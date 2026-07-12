@@ -4,7 +4,10 @@
 ルートページはアプリ一覧、`/apps/{app-slug}/`は各アプリの専用LPとして運用します。
 
 > [!NOTE]
-> 「小さなアプリ工房」は仮名称です。正式公開前に最終確認してください。
+> 「小さなアプリ工房」はポータル名です。各アプリの公開IDは`docs/public-identity.md`で管理します。
+
+> [!IMPORTANT]
+> 「あしたもつもの」の正式名称、問い合わせ先、Production URLは確定済みです。公開表示はひらがなの「あしたもつもの」、問い合わせ先は`kaenozu@gmail.com`、Production originは`https://lp-5t7.pages.dev`へ統一します。
 
 ## 公開環境
 
@@ -142,7 +145,8 @@ python -m http.server 8123
 │       └── contact.html
 └── docs/
     ├── app-lp-template.md
-    └── new-app-checklist.md
+    ├── new-app-checklist.md
+    └── public-identity.md
 ```
 
 ## URLルール
@@ -219,13 +223,13 @@ contact.html
 - [x] 正式faviconへ差し替え
 - [x] 正式OGP画像へ差し替え
 - [x] あしたもつものを実装済みFlutter画面のスクリーンショットへ差し替え
+- [x] 正式なサービス名を「あしたもつもの」に確定
+- [x] Productionでは`pages.dev`を継続利用すると決定
+- [x] 問い合わせ先を`kaenozu@gmail.com`に確定
 
 ### 継続確認
 
-- [ ] 正式なサービス名を確定
-- [ ] カスタムドメインの要否を決定
 - [ ] Google Search Consoleへ登録
-- [ ] 問い合わせメールアドレスを正式確認
 - [ ] 法務ページをリリース時の実装・外部サービスに合わせて確定
 - [ ] App Store / Google Play公開後にストアURLを追加
 - [ ] LighthouseをProductionで測定
