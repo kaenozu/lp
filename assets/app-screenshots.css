@@ -25,3 +25,9 @@
     width: min(100%, 300px);
   }
 }
+
+@media (min-width: 900px) {
+  .screenshot-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
