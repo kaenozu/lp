@@ -197,7 +197,7 @@ async function auditTwoHundredPercentTextResize(browser) {
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
     const result = await page.evaluate(() => {
-      const keySelectors = ['h1', '.hero__lead', '.hero__actions', '#features', '#usage', '#faq', '.screenshot-grid'];
+      const keySelectors = ['h1', '.hero__sub', '.hero__desc', '.hero__actions', '#features', '#usage', '#faq', '.screenshot-grid'];
       const keyElements = keySelectors.map((selector) => {
         const element = document.querySelector(selector);
         if (!element) return { selector, exists: false };
