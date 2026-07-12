@@ -121,11 +121,12 @@ jobs:
             test -s "$output_dir/${name}.png"
           }
 
+          screens_url="${TARGET_URL}#:~:text=画面イメージ"
           capture 390 844 mobile-top "$TARGET_URL"
-          capture 390 844 mobile-screens "${TARGET_URL}#screenshots"
-          capture 820 1180 tablet-screens "${TARGET_URL}#screenshots"
+          capture 390 844 mobile-screens "$screens_url"
+          capture 820 1180 tablet-screens "$screens_url"
           capture 1440 1200 desktop-top "$TARGET_URL"
-          capture 1440 1200 desktop-screens "${TARGET_URL}#screenshots"
+          capture 1440 1200 desktop-screens "$screens_url"
 
       - name: Install Lighthouse CI
         shell: bash
