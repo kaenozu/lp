@@ -38,6 +38,13 @@ function durationToMilliseconds(value) {
 
 async function waitForRenderedScreens(page) {
   await page.waitForFunction(
+    () => document.querySelectorAll('.real-app-screen').length === 4,
+    { timeout: 30000 },
+  );
+  await page.$eval('.screenshot-grid', (grid) => {
+    grid.scrollIntoView({ block: 'center', inline: 'nearest' });
+  });
+  await page.waitForFunction(
     () => {
       const images = Array.from(document.querySelectorAll('.real-app-screen'));
       return images.length === 4 && images.every((image) => image.complete && image.naturalWidth > 0);
@@ -45,6 +52,7 @@ async function waitForRenderedScreens(page) {
     { timeout: 30000 },
   );
   await page.evaluate(() => document.fonts.ready.then(() => true));
+  await page.evaluate(() => window.scrollTo(0, 0));
 }
 
 async function openRenderedPage(browser, viewport) {
