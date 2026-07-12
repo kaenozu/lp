@@ -164,23 +164,72 @@ jobs:
           PY
           }
 
-          verify_html_marker_from_source() {
+          verify_html_metadata_from_source() {
             local path="$1"
             local local_file="$2"
-            local selector="$3"
-            local expected_marker
+            local check_type="$3"
             local downloaded_file="${temp_dir}/page-$(printf '%s' "$path" | sha256sum | cut -d ' ' -f 1).html"
 
-            expected_marker="$(grep -m1F "$selector" "$local_file" | sed -E 's/^[[:space:]]+//')"
             fetch_url "$path" "$downloaded_file"
+            python - "$local_file" "$downloaded_file" "$check_type" <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          import sys
 
-            if ! grep -qF "$expected_marker" "$downloaded_file"; then
-              echo "Expected metadata was not found on deployment URL: $path" >&2
-              echo "Marker: $expected_marker" >&2
-              return 1
-            fi
 
-            echo "Verified metadata: $path ($selector)"
+          class MetadataParser(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.elements = []
+
+              def handle_starttag(self, tag, attrs):
+                  self.elements.append((tag.lower(), dict(attrs)))
+
+              def handle_startendtag(self, tag, attrs):
+                  self.handle_starttag(tag, attrs)
+
+
+          def parse(path):
+              parser = MetadataParser()
+              parser.feed(Path(path).read_text(encoding="utf-8"))
+              return parser.elements
+
+
+          local_elements = parse(sys.argv[1])
+          remote_elements = parse(sys.argv[2])
+          check_type = sys.argv[3]
+
+          if check_type == "favicon":
+              def favicon_hrefs(elements):
+                  return [
+                      attrs.get("href")
+                      for tag, attrs in elements
+                      if tag == "link"
+                      and "icon" in attrs.get("rel", "").split()
+                      and attrs.get("href", "").endswith("/favicon.svg")
+                  ]
+
+              expected = favicon_hrefs(local_elements)
+              actual = favicon_hrefs(remote_elements)
+              assert expected == ["/assets/brand/favicon.svg"], expected
+              assert actual == expected, (actual, expected)
+              print(f"Verified favicon metadata: {actual[0]}")
+          elif check_type == "og-image":
+              def og_images(elements):
+                  return [
+                      attrs.get("content")
+                      for tag, attrs in elements
+                      if tag == "meta" and attrs.get("property") == "og:image"
+                  ]
+
+              expected = og_images(local_elements)
+              actual = og_images(remote_elements)
+              assert len(expected) == 1 and expected[0], expected
+              assert actual == expected, (actual, expected)
+              print(f"Verified og:image metadata: {actual[0]}")
+          else:
+              raise AssertionError(f"unknown HTML metadata check: {check_type}")
+          PY
           }
 
           current_check="favicon SVG"
@@ -205,16 +254,16 @@ jobs:
           verify_png "/assets/brand/og-ehenotane.png" 1200 630
 
           current_check="portal favicon metadata"
-          verify_html_marker_from_source "/" "_site/index.html" 'href="/assets/brand/favicon.svg"'
+          verify_html_metadata_from_source "/" "_site/index.html" "favicon"
 
           current_check="portal OGP metadata"
-          verify_html_marker_from_source "/" "_site/index.html" 'property="og:image"'
+          verify_html_metadata_from_source "/" "_site/index.html" "og-image"
 
           current_check="ashita OGP metadata"
-          verify_html_marker_from_source "/apps/ashita-motsumono/" "_site/apps/ashita-motsumono/index.html" 'property="og:image"'
+          verify_html_metadata_from_source "/apps/ashita-motsumono/" "_site/apps/ashita-motsumono/index.html" "og-image"
 
           current_check="ehenotane OGP metadata"
-          verify_html_marker_from_source "/apps/ehenotane/" "_site/apps/ehenotane/index.html" 'property="og:image"'
+          verify_html_metadata_from_source "/apps/ehenotane/" "_site/apps/ehenotane/index.html" "og-image"
 
           trap - EXIT
           rm -rf "$temp_dir"
