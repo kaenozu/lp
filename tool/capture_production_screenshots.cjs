@@ -164,7 +164,7 @@ async function auditKeyboardFocus(browser) {
     });
 
     const focusTrail = [];
-    for (let index = 0; index < 8; index += 1) {
+    for (let index = 0; index < 20; index += 1) {
       await page.keyboard.press('Tab');
       focusTrail.push(await page.evaluate(() => {
         const active = document.activeElement;
