@@ -7,7 +7,7 @@
   background: var(--color-surface);
   border: 3px solid var(--color-text);
   border-radius: 32px;
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-soft);
 }
 
 .mock-wrapper .real-app-screen {
@@ -23,5 +23,11 @@
   .mock-wrapper .real-app-screen,
   .screenshot-item .real-app-screen {
     width: min(100%, 300px);
+  }
+}
+
+@media (min-width: 900px) {
+  .screenshot-grid {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
