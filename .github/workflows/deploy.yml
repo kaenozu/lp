@@ -53,6 +53,22 @@ jobs:
           DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment-url }}
         run: |
           set -euo pipefail
+
+          current_check="initialization"
+          temp_dir=""
+          report_exit() {
+            local status=$?
+            if [[ -n "$temp_dir" ]]; then
+              rm -rf "$temp_dir"
+            fi
+            if (( status != 0 )); then
+              echo "failure=${current_check}" >> "$GITHUB_OUTPUT"
+            fi
+            exit "$status"
+          }
+          trap report_exit EXIT
+
+          current_check="deployment URL output"
           base_url="${DEPLOYMENT_URL%/}"
           if [[ -z "$base_url" ]]; then
             echo "Wrangler Action deployment-url output is empty" >&2
@@ -61,7 +77,34 @@ jobs:
 
           echo "Verifying deployment URL: $base_url"
           temp_dir="$(mktemp -d)"
-          trap 'rm -rf "$temp_dir"' EXIT
+
+          current_check="deployment URL readiness"
+          ready=false
+          for attempt in $(seq 1 20); do
+            if curl \
+              --fail \
+              --silent \
+              --show-error \
+              --location \
+              --connect-timeout 5 \
+              --max-time 10 \
+              "${base_url}/" \
+              --output "${temp_dir}/ready.html"; then
+              ready=true
+              echo "Deployment URL is ready (attempt ${attempt}/20)"
+              break
+            fi
+
+            echo "Deployment URL not ready yet (attempt ${attempt}/20)"
+            if (( attempt < 20 )); then
+              sleep 3
+            fi
+          done
+
+          if [[ "$ready" != true ]]; then
+            echo "Deployment URL did not become ready: $base_url" >&2
+            exit 1
+          fi
 
           fetch_url() {
             local path="$1"
@@ -79,32 +122,15 @@ jobs:
               --max-time 15 \
               "${base_url}${path}" \
               --output "$output"
-          }
 
-          fetch_with_propagation_retry() {
-            local path="$1"
-            local output="$2"
-
-            for attempt in $(seq 1 5); do
-              if fetch_url "$path" "$output" && [[ -s "$output" ]]; then
-                return 0
-              fi
-
-              echo "Resource not ready yet: $path (attempt ${attempt}/5)"
-              if (( attempt < 5 )); then
-                sleep 2
-              fi
-            done
-
-            echo "Resource missing or unreachable on deployment URL: $path" >&2
-            return 1
+            test -s "$output"
           }
 
           verify_svg() {
             local path="$1"
             local downloaded_file="${temp_dir}/favicon.svg"
 
-            fetch_with_propagation_retry "$path" "$downloaded_file"
+            fetch_url "$path" "$downloaded_file"
             grep -q '<svg' "$downloaded_file"
             grep -q 'viewBox="0 0 512 512"' "$downloaded_file"
             echo "Verified SVG structure: $path"
@@ -116,7 +142,7 @@ jobs:
             local expected_height="$3"
             local downloaded_file="${temp_dir}/$(basename "$path")"
 
-            fetch_with_propagation_retry "$path" "$downloaded_file"
+            fetch_url "$path" "$downloaded_file"
             python - "$downloaded_file" "$expected_width" "$expected_height" <<'PY'
           from pathlib import Path
           import struct
@@ -145,7 +171,7 @@ jobs:
             local downloaded_file="${temp_dir}/page-$(printf '%s' "$path" | sha256sum | cut -d ' ' -f 1).html"
 
             expected_marker="$(grep -m1F "$selector" "$local_file" | sed -E 's/^[[:space:]]+//')"
-            fetch_with_propagation_retry "$path" "$downloaded_file"
+            fetch_url "$path" "$downloaded_file"
 
             if ! grep -qF "$expected_marker" "$downloaded_file"; then
               echo "Expected metadata was not found on deployment URL: $path" >&2
@@ -156,18 +182,41 @@ jobs:
             echo "Verified metadata: $path ($selector)"
           }
 
+          current_check="favicon SVG"
           verify_svg "/assets/brand/favicon.svg"
+
+          current_check="favicon 32x32 PNG"
           verify_png "/assets/brand/favicon-32x32.png" 32 32
+
+          current_check="favicon 16x16 PNG"
           verify_png "/assets/brand/favicon-16x16.png" 16 16
+
+          current_check="Apple touch icon PNG"
           verify_png "/assets/brand/apple-touch-icon.png" 180 180
+
+          current_check="portal OGP PNG"
           verify_png "/assets/brand/og-portal.png" 1200 630
+
+          current_check="ashita OGP PNG"
           verify_png "/assets/brand/og-ashita-motsumono.png" 1200 630
+
+          current_check="ehenotane OGP PNG"
           verify_png "/assets/brand/og-ehenotane.png" 1200 630
 
+          current_check="portal favicon metadata"
           verify_html_marker_from_source "/" "_site/index.html" 'href="/assets/brand/favicon.svg"'
+
+          current_check="portal OGP metadata"
           verify_html_marker_from_source "/" "_site/index.html" 'property="og:image"'
+
+          current_check="ashita OGP metadata"
           verify_html_marker_from_source "/apps/ashita-motsumono/" "_site/apps/ashita-motsumono/index.html" 'property="og:image"'
+
+          current_check="ehenotane OGP metadata"
           verify_html_marker_from_source "/apps/ehenotane/" "_site/apps/ehenotane/index.html" 'property="og:image"'
+
+          trap - EXIT
+          rm -rf "$temp_dir"
 
       - name: Smoke test production
         id: smoke
@@ -207,6 +256,7 @@ jobs:
           JOB_STATUS: ${{ job.status }}
           DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
           VERIFY_OUTCOME: ${{ steps.verify.outcome }}
+          VERIFY_FAILURE: ${{ steps.verify.outputs.failure }}
           SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
           PRODUCTION_URL: https://lp-5t7.pages.dev
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -230,13 +280,13 @@ jobs:
               if [[ "$DEPLOY_OUTCOME" != "success" ]]; then
                 failed_stage="deploy"
               elif [[ "$VERIFY_OUTCOME" != "success" ]]; then
-                failed_stage="artifact verification"
+                failed_stage="${VERIFY_FAILURE:-artifact verification}"
               elif [[ "$SMOKE_OUTCOME" != "success" ]]; then
                 failed_stage="production smoke test"
               else
                 failed_stage="status reporting"
               fi
-              description="Cloudflare Pages failed at ${failed_stage}"
+              description="Cloudflare Pages failed: ${failed_stage}"
               ;;
           esac
 
