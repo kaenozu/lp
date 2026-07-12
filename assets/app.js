@@ -11,15 +11,12 @@ document.addEventListener("DOMContentLoaded", function () {
     el.textContent = currentYear;
   });
 
-  var normalizedPath = window.location.pathname.replace(/\/+$/, "");
+  var normalizedPath = window.location.pathname
+    .replace(/\/index\.html$/, "")
+    .replace(/\/+$/, "");
   if (normalizedPath !== "/apps/ashita-motsumono") {
     return;
   }
-
-  var screenshotStyles = document.createElement("link");
-  screenshotStyles.rel = "stylesheet";
-  screenshotStyles.href = "/assets/app-screenshots.css";
-  document.head.appendChild(screenshotStyles);
 
   var screenshots = [
     {
@@ -54,38 +51,49 @@ document.addEventListener("DOMContentLoaded", function () {
     return image;
   }
 
-  var heroMock = document.querySelector(".section--mock .phone-mock");
-  if (heroMock) {
-    heroMock.replaceWith(createScreenshotImage(screenshots[0], true));
-  }
+  function showRealScreenshots() {
+    var heroMock = document.querySelector(".section--mock .phone-mock");
+    if (heroMock) {
+      heroMock.replaceWith(createScreenshotImage(screenshots[0], true));
+    }
 
-  var screenshotItems = document.querySelectorAll(".screenshot-grid .screenshot-item");
-  screenshotItems.forEach(function (item, index) {
-    var screenshot = screenshots[index];
-    if (!screenshot) {
+    var screenshotGrid = document.querySelector(".screenshot-grid");
+    if (!screenshotGrid) {
       return;
     }
 
-    var mock = item.querySelector(".phone-mock");
-    if (mock) {
-      mock.replaceWith(createScreenshotImage(screenshot, false));
-    }
+    var screenshotItems = screenshotGrid.querySelectorAll(".screenshot-item");
+    screenshotItems.forEach(function (item, index) {
+      var screenshot = screenshots[index];
+      if (!screenshot) {
+        return;
+      }
 
-    var description = item.querySelector(".screenshot-item__desc");
-    if (description) {
-      description.textContent = screenshot.description;
-    }
-  });
+      var mock = item.querySelector(".phone-mock");
+      if (mock) {
+        mock.replaceWith(createScreenshotImage(screenshot, false));
+      }
 
-  var sectionTitles = document.querySelectorAll(".section__title");
-  sectionTitles.forEach(function (title) {
-    if (title.textContent.trim() !== "画面イメージ") {
+      var description = item.querySelector(".screenshot-item__desc");
+      if (description) {
+        description.textContent = screenshot.description;
+      }
+    });
+
+    var section = screenshotGrid.closest(".section");
+    if (!section) {
       return;
     }
 
-    var subtitle = title.nextElementSibling;
-    if (subtitle && subtitle.classList.contains("section__subtitle")) {
+    var subtitle = section.querySelector(".section__subtitle");
+    if (subtitle) {
       subtitle.textContent = "現在の実装画面を、匿名のサンプルデータで表示しています。";
     }
-  });
+  }
+
+  var screenshotStyles = document.createElement("link");
+  screenshotStyles.rel = "stylesheet";
+  screenshotStyles.href = "/assets/app-screenshots.css";
+  screenshotStyles.addEventListener("load", showRealScreenshots, { once: true });
+  document.head.appendChild(screenshotStyles);
 });
