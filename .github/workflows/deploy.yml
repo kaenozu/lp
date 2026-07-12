@@ -19,7 +19,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Checkout repository
@@ -75,7 +75,7 @@ jobs:
       - name: Verify production brand assets and metadata
         shell: bash
         env:
-          DEPLOYED_COMMIT: ${{ github.sha }}
+          CACHE_BUSTER: ${{ github.sha }}
         run: |
           set -euo pipefail
           base_url="https://lp-5t7.pages.dev"
@@ -85,14 +85,19 @@ jobs:
           fetch_url() {
             local path="$1"
             local output="$2"
+
+            # cbは特定デプロイを選択する値ではなく、古いエッジキャッシュを避けるためだけに使う。
             curl \
               --fail \
               --silent \
               --show-error \
               --location \
-              --connect-timeout 10 \
-              --max-time 30 \
-              "${base_url}${path}?commit=${DEPLOYED_COMMIT}" \
+              --retry 2 \
+              --retry-delay 1 \
+              --retry-all-errors \
+              --connect-timeout 5 \
+              --max-time 15 \
+              "${base_url}${path}?cb=${CACHE_BUSTER}" \
               --output "$output"
           }
 
@@ -102,11 +107,13 @@ jobs:
             local downloaded_file="${temp_dir}/$(basename "$path")"
             local expected_hash
             local actual_hash
+            local fetched=false
 
             expected_hash="$(sha256sum "$local_file" | cut -d ' ' -f 1)"
 
-            for attempt in $(seq 1 10); do
+            for attempt in $(seq 1 5); do
               if fetch_url "$path" "$downloaded_file"; then
+                fetched=true
                 actual_hash="$(sha256sum "$downloaded_file" | cut -d ' ' -f 1)"
                 if [[ "$actual_hash" == "$expected_hash" ]]; then
                   echo "Verified asset: $path"
@@ -114,31 +121,51 @@ jobs:
                 fi
               fi
 
-              echo "Asset not current yet: $path (attempt ${attempt}/10)"
-              sleep 3
+              echo "Asset not current yet: $path (attempt ${attempt}/5)"
+              if (( attempt < 5 )); then
+                sleep 2
+              fi
             done
 
-            echo "Production asset differs from deployed artifact: $path" >&2
+            if [[ "$fetched" == false ]]; then
+              echo "Asset missing or unreachable on Production: $path" >&2
+            else
+              echo "Production asset differs from deployed artifact: $path" >&2
+            fi
             return 1
           }
 
-          verify_html_marker() {
+          verify_html_marker_from_source() {
             local path="$1"
-            local marker="$2"
+            local local_file="$2"
+            local selector="$3"
+            local expected_marker
             local downloaded_file="${temp_dir}/page-$(printf '%s' "$path" | sha256sum | cut -d ' ' -f 1).html"
+            local fetched=false
 
-            for attempt in $(seq 1 10); do
-              if fetch_url "$path" "$downloaded_file" && grep -qF "$marker" "$downloaded_file"; then
-                echo "Verified metadata: $path"
-                return 0
+            expected_marker="$(grep -m1F "$selector" "$local_file" | sed -E 's/^[[:space:]]+//')"
+
+            for attempt in $(seq 1 5); do
+              if fetch_url "$path" "$downloaded_file"; then
+                fetched=true
+                if grep -qF "$expected_marker" "$downloaded_file"; then
+                  echo "Verified metadata: $path"
+                  return 0
+                fi
               fi
 
-              echo "Metadata not current yet: $path (attempt ${attempt}/10)"
-              sleep 3
+              echo "Metadata not current yet: $path (attempt ${attempt}/5)"
+              if (( attempt < 5 )); then
+                sleep 2
+              fi
             done
 
-            echo "Expected metadata was not found in Production: $path" >&2
-            echo "Marker: $marker" >&2
+            if [[ "$fetched" == false ]]; then
+              echo "Production page missing or unreachable: $path" >&2
+            else
+              echo "Expected metadata was not found in Production: $path" >&2
+              echo "Marker: $expected_marker" >&2
+            fi
             return 1
           }
 
@@ -156,10 +183,10 @@ jobs:
             verify_asset "$asset"
           done
 
-          verify_html_marker "/" 'href="/assets/brand/favicon.svg"'
-          verify_html_marker "/" 'property="og:image" content="https://lp-5t7.pages.dev/assets/brand/og-portal.png"'
-          verify_html_marker "/apps/ashita-motsumono/" 'property="og:image" content="https://lp-5t7.pages.dev/assets/brand/og-ashita-motsumono.png"'
-          verify_html_marker "/apps/ehenotane/" 'property="og:image" content="https://lp-5t7.pages.dev/assets/brand/og-ehenotane.png"'
+          verify_html_marker_from_source "/" "_site/index.html" 'href="/assets/brand/favicon.svg"'
+          verify_html_marker_from_source "/" "_site/index.html" 'property="og:image"'
+          verify_html_marker_from_source "/apps/ashita-motsumono/" "_site/apps/ashita-motsumono/index.html" 'property="og:image"'
+          verify_html_marker_from_source "/apps/ehenotane/" "_site/apps/ehenotane/index.html" 'property="og:image"'
 
       - name: Report deployment status
         if: always()
