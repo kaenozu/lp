@@ -1,0 +1,74 @@
+name: Validate Production browser audit
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/audit-production.yml"
+      - ".github/workflows/validate-production-browser.yml"
+      - "tool/capture_production_screenshots.cjs"
+      - "assets/app.js"
+      - "assets/styles.css"
+      - "assets/app-screenshots.css"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-browser-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      TARGET_URL: https://lp-5t7.pages.dev/apps/ashita-motsumono/
+      AUDIT_BROWSER_DIR: production-audit/browser
+
+    steps:
+      - name: Checkout pull request head
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Locate Chrome
+        shell: bash
+        run: |
+          set -euo pipefail
+          chrome_path="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          if [[ -z "$chrome_path" ]]; then
+            echo "::error::Chrome or Chromium was not found on the runner"
+            exit 1
+          fi
+          echo "CHROME_PATH=$chrome_path" >> "$GITHUB_ENV"
+          "$chrome_path" --version
+
+      - name: Install Japanese fonts and Puppeteer
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends fonts-noto-cjk
+          fc-cache -f
+
+          mkdir -p "$AUDIT_BROWSER_DIR"
+          fc-match :lang=ja | tee "$AUDIT_BROWSER_DIR/japanese-font-match.txt"
+          grep -qi 'Noto' "$AUDIT_BROWSER_DIR/japanese-font-match.txt"
+
+          npm install \
+            --no-save \
+            --package-lock=false \
+            --ignore-scripts \
+            puppeteer-core@25.3.0
+
+      - name: Run Production browser evidence audit
+        run: node tool/capture_production_screenshots.cjs
+
+      - name: Upload browser audit evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: production-browser-pr-audit-${{ github.event.pull_request.number }}
+          path: production-audit/browser/
+          if-no-files-found: warn
+          retention-days: 7
