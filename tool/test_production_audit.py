@@ -90,7 +90,7 @@ class ProductionAuditTest(unittest.TestCase):
 
     def test_layout_evidence_is_written_before_assertions(self) -> None:
         write_position = self.capture_script.index('`${viewport.name}-layout.json`')
-        validate_position = self.capture_script.index('validateLayout(layout, viewport)')
+        validate_position = self.capture_script.rindex('      validateLayout(layout, viewport);')
         self.assertLess(write_position, validate_position)
 
     def test_rendered_image_loading_contract_is_checked(self) -> None:
