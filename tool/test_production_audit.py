@@ -65,14 +65,13 @@ class ProductionAuditTest(unittest.TestCase):
         self.assertIn('loading="eager"', self.workflow)
         self.assertIn('loading="lazy"', self.workflow)
         self.assertIn('fetchpriority="high"', self.workflow)
+        self.assertIn('#:~:text=画面イメージ', self.workflow)
+        self.assertIn('<h2 class="section__title">画面イメージ</h2>', self.app_html)
 
     def test_statuses_are_recorded_against_deployed_sha(self) -> None:
         self.assertIn('github.event.workflow_run.head_sha || github.sha', self.workflow)
         self.assertIn('production-browser-verification', self.workflow)
         self.assertIn('lighthouse-production', self.workflow)
-
-    def test_page_has_a_stable_screenshot_anchor(self) -> None:
-        self.assertIn('<section class="section section--surface" id="screenshots">', self.app_html)
 
     def test_css_and_javascript_fallback_contract_is_preserved(self) -> None:
         self.assertIn('screenshotStyles.addEventListener("load", showRealScreenshots', self.app_js)
