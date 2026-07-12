@@ -38,3 +38,37 @@ jobs:
           test -d _site/apps
           test ! -e _site/.github
           test ! -e _site/README.md
+
+          # assets/brand/ の7ファイルが存在する
+          test -f _site/assets/brand/favicon.svg
+          test -f _site/assets/brand/favicon-32x32.png
+          test -f _site/assets/brand/favicon-16x16.png
+          test -f _site/assets/brand/apple-touch-icon.png
+          test -f _site/assets/brand/og-portal.png
+          test -f _site/assets/brand/og-ashita-motsumono.png
+          test -f _site/assets/brand/og-ehenotane.png
+
+          # PNGファイルが空でない
+          test -s _site/assets/brand/favicon-32x32.png
+          test -s _site/assets/brand/favicon-16x16.png
+          test -s _site/assets/brand/apple-touch-icon.png
+          test -s _site/assets/brand/og-portal.png
+          test -s _site/assets/brand/og-ashita-motsumono.png
+          test -s _site/assets/brand/og-ehenotane.png
+
+          # 各HTMLにfavicon.svgの参照がある
+          for html in _site/index.html _site/apps/ashita-motsumono/index.html _site/apps/ashita-motsumono/privacy.html _site/apps/ashita-motsumono/terms.html _site/apps/ashita-motsumono/contact.html _site/apps/ehenotane/index.html _site/apps/ehenotane/privacy.html _site/apps/ehenotane/terms.html _site/apps/ehenotane/contact.html; do
+            grep -q 'assets/brand/favicon.svg' "$html"
+          done
+
+          # 各HTMLに対応する絶対 og:image が1件だけある
+          og_portal=$(grep -c 'property="og:image"' _site/index.html)
+          test "$og_portal" -eq 1
+          og_ashita=$(grep -c 'property="og:image"' _site/apps/ashita-motsumono/index.html)
+          test "$og_ashita" -eq 1
+          og_ehen=$(grep -c 'property="og:image"' _site/apps/ehenotane/index.html)
+          test "$og_ehen" -eq 1
+
+          # .html拡張子付き内部リンクを新規作成していない
+          ! grep -rq 'href="[^"]*\.html"' _site/index.html _site/apps/
+          echo "All brand asset and HTML checks passed"
