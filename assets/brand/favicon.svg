@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!--
+    favicon.svg
+    ポータル全体を表す幾何学マーク（2枚のアプリカードが重なる形）
+    配色は assets/styles.css の既存カラーを使用
+  -->
+  <!-- 後ろのカード（白、ボーダー付き） -->
+  <rect x="120" y="80" width="280" height="340" rx="40" ry="40"
+        fill="#ffffff" stroke="#eadfce" stroke-width="16"/>
+  <!-- 前のカード（プライマリカラー） -->
+  <rect x="90" y="110" width="280" height="340" rx="40" ry="40"
+        fill="#f6a531"/>
+  <!-- 前カード上の裝飾（白い横線3本＝カード内のテキスト行） -->
+  <rect x="130" y="170" width="160" height="16" rx="8" ry="8" fill="#ffffff" opacity="0.9"/>
+  <rect x="130" y="210" width="120" height="16" rx="8" ry="8" fill="#ffffff" opacity="0.7"/>
+  <rect x="130" y="250" width="140" height="16" rx="8" ry="8" fill="#ffffff" opacity="0.5"/>
+</svg>

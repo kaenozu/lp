@@ -38,3 +38,135 @@ jobs:
           test -d _site/apps
           test ! -e _site/.github
           test ! -e _site/README.md
+
+          for asset in \
+            favicon.svg \
+            favicon-32x32.png \
+            favicon-16x16.png \
+            apple-touch-icon.png \
+            og-portal.png \
+            og-ashita-motsumono.png \
+            og-ehenotane.png; do
+            test -s "_site/assets/brand/$asset"
+          done
+
+          python - <<'PY'
+          from pathlib import Path
+          import struct
+          import zlib
+
+          BRAND_DIR = Path("_site/assets/brand")
+          EXPECTED = {
+              "favicon-16x16.png": ((16, 16), 6, True),
+              "favicon-32x32.png": ((32, 32), 6, True),
+              "apple-touch-icon.png": ((180, 180), 6, True),
+              "og-portal.png": ((1200, 630), 2, False),
+              "og-ashita-motsumono.png": ((1200, 630), 2, False),
+              "og-ehenotane.png": ((1200, 630), 2, False),
+          }
+
+          def paeth(left: int, up: int, upper_left: int) -> int:
+              estimate = left + up - upper_left
+              distance_left = abs(estimate - left)
+              distance_up = abs(estimate - up)
+              distance_upper_left = abs(estimate - upper_left)
+              if distance_left <= distance_up and distance_left <= distance_upper_left:
+                  return left
+              if distance_up <= distance_upper_left:
+                  return up
+              return upper_left
+
+          def read_png(path: Path):
+              data = path.read_bytes()
+              assert data.startswith(b"\x89PNG\r\n\x1a\n"), f"invalid PNG: {path}"
+              offset = 8
+              idat = bytearray()
+              ihdr = None
+              while offset < len(data):
+                  length = struct.unpack(">I", data[offset:offset + 4])[0]
+                  chunk_type = data[offset + 4:offset + 8]
+                  chunk_data = data[offset + 8:offset + 8 + length]
+                  offset += 12 + length
+                  if chunk_type == b"IHDR":
+                      ihdr = struct.unpack(">IIBBBBB", chunk_data)
+                  elif chunk_type == b"IDAT":
+                      idat.extend(chunk_data)
+                  elif chunk_type == b"IEND":
+                      break
+              assert ihdr is not None, f"missing IHDR: {path}"
+              width, height, bit_depth, color_type, compression, filtering, interlace = ihdr
+              assert bit_depth == 8, f"unsupported bit depth: {path}"
+              assert compression == 0 and filtering == 0 and interlace == 0, f"unsupported PNG format: {path}"
+              return width, height, color_type, bytes(idat)
+
+          def has_visible_alpha(width: int, height: int, compressed: bytes) -> bool:
+              bytes_per_pixel = 4
+              stride = width * bytes_per_pixel
+              raw = zlib.decompress(compressed)
+              previous = bytearray(stride)
+              offset = 0
+              visible = False
+              for _ in range(height):
+                  filter_type = raw[offset]
+                  offset += 1
+                  row = bytearray(raw[offset:offset + stride])
+                  offset += stride
+                  for index in range(stride):
+                      left = row[index - bytes_per_pixel] if index >= bytes_per_pixel else 0
+                      up = previous[index]
+                      upper_left = previous[index - bytes_per_pixel] if index >= bytes_per_pixel else 0
+                      if filter_type == 1:
+                          row[index] = (row[index] + left) & 0xFF
+                      elif filter_type == 2:
+                          row[index] = (row[index] + up) & 0xFF
+                      elif filter_type == 3:
+                          row[index] = (row[index] + ((left + up) // 2)) & 0xFF
+                      elif filter_type == 4:
+                          row[index] = (row[index] + paeth(left, up, upper_left)) & 0xFF
+                      elif filter_type != 0:
+                          raise AssertionError(f"unsupported PNG filter: {filter_type}")
+                  visible = visible or any(row[index] for index in range(3, stride, 4))
+                  previous = row
+              return visible
+
+          for filename, (expected_size, expected_color_type, require_visible_alpha) in EXPECTED.items():
+              path = BRAND_DIR / filename
+              width, height, color_type, compressed = read_png(path)
+              assert (width, height) == expected_size, (filename, (width, height), expected_size)
+              assert color_type == expected_color_type, (filename, color_type, expected_color_type)
+              if require_visible_alpha:
+                  assert has_visible_alpha(width, height, compressed), f"fully transparent image: {filename}"
+              if filename.startswith("og-"):
+                  assert path.stat().st_size < 1_000_000, f"OGP image is too large: {filename}"
+              print(filename, width, height, color_type, path.stat().st_size)
+          PY
+
+          mapfile -d '' html_files < <(find _site -type f -name '*.html' -print0 | sort -z)
+          test "${#html_files[@]}" -eq 9
+
+          for html in "${html_files[@]}"; do
+            case "$html" in
+              _site/index.html)
+                expected_og="https://lp-5t7.pages.dev/assets/brand/og-portal.png"
+                ;;
+              _site/apps/ashita-motsumono/*)
+                expected_og="https://lp-5t7.pages.dev/assets/brand/og-ashita-motsumono.png"
+                ;;
+              _site/apps/ehenotane/*)
+                expected_og="https://lp-5t7.pages.dev/assets/brand/og-ehenotane.png"
+                ;;
+              *)
+                echo "Unexpected HTML path: $html" >&2
+                exit 1
+                ;;
+            esac
+
+            test "$(grep -cF 'href="/assets/brand/favicon.svg"' "$html")" -eq 1
+            test "$(grep -cF 'property="og:image"' "$html")" -eq 1
+            test "$(grep -cF 'name="twitter:image"' "$html")" -eq 1
+            grep -qF "property=\"og:image\" content=\"$expected_og\"" "$html"
+            grep -qF "name=\"twitter:image\" content=\"$expected_og\"" "$html"
+          done
+
+          ! grep -RInE 'href="[^"]*\.html([?#][^"]*)?"' _site/index.html _site/apps/
+          echo "All brand asset and HTML checks passed"

@@ -94,10 +94,15 @@ python -m http.server 8123
 ├── assets/
 │   ├── styles.css                       # 共通CSS
 │   ├── app.js                           # 共通JavaScript
-│   ├── favicon.png                      # ファビコン（仮）
-│   ├── ogp.png                          # ポータルOGP（仮）
-│   ├── ogp-ashita-motsumono.png         # あしたもつものOGP（仮）
-│   └── ogp-ehenotane.png                # へぇの種OGP（仮）
+│   └── brand/
+│       ├── favicon.svg                  # ファビコン（SVG）
+│       ├── favicon-32x32.png            # ファビコン（32x32）
+│       ├── favicon-16x16.png            # ファビコン（16x16）
+│       ├── apple-touch-icon.png         # Apple Touch Icon（180x180）
+│       ├── og-portal.png               # ポータルOGP（1200x630）
+│       ├── og-ashita-motsumono.png      # あしたもつものOGP（1200x630）
+│       ├── og-ehenotane.png            # へぇの種OGP（1200x630）
+│       └── generate_assets.py          # アセット生成スクリプト
 ├── apps/
 │   ├── ashita-motsumono/
 │   │   ├── index.html
@@ -189,8 +194,8 @@ contact.html
 - [ ] 正式なサービス名を確定
 - [ ] カスタムドメインの要否を決定
 - [ ] Google Search Consoleへ登録
-- [ ] 正式faviconへ差し替え
-- [ ] 正式OGP画像へ差し替え
+- [x] 正式faviconへ差し替え
+- [x] 正式OGP画像へ差し替え
 - [ ] アプリ画面を実機スクリーンショットへ差し替え
 - [ ] 問い合わせメールアドレスを正式確認
 - [ ] 法務ページをリリース時の実装・外部サービスに合わせて確定
