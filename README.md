@@ -81,6 +81,7 @@ Secretの値はREADME、Issue、PR、ログへ記載しないでください。
 - `assets/`と`apps/`が含まれること
 - `.github/`と`README.md`が公開物へ混入しないこと
 - ブランド資産7点が存在し、PNGの形式・寸法・透明度・ファイルサイズが要件を満たすこと
+- あしたもつものの実装画面3点がWebP形式・360×640で存在し、表示用JavaScriptから参照されること
 - 全9 HTMLに対応するfavicon、OGP、Twitter Cardが1件ずつ設定されていること
 - `.html`拡張子付き内部リンクが含まれないこと
 
@@ -111,7 +112,14 @@ python -m http.server 8123
 ├── README.md                            # このファイル
 ├── assets/
 │   ├── styles.css                       # 共通CSS
-│   ├── app.js                           # 共通JavaScript
+│   ├── app.js                           # 共通JavaScript・実画面表示
+│   ├── app-screenshots.css              # 実画面スクリーンショット用CSS
+│   ├── apps/
+│   │   └── ashita-motsumono/
+│   │       └── screenshots/
+│   │           ├── home-tomorrow.webp
+│   │           ├── review-extraction.webp
+│   │           └── all-complete.webp
 │   └── brand/
 │       ├── favicon.svg                  # ファビコン（SVG）
 │       ├── favicon-32x32.png            # ファビコン（32x32）
@@ -210,13 +218,13 @@ contact.html
 - [x] 配信済みブランド資産とHTMLメタデータの意味検証を追加
 - [x] 正式faviconへ差し替え
 - [x] 正式OGP画像へ差し替え
+- [x] あしたもつものを実装済みFlutter画面のスクリーンショットへ差し替え
 
 ### 継続確認
 
 - [ ] 正式なサービス名を確定
 - [ ] カスタムドメインの要否を決定
 - [ ] Google Search Consoleへ登録
-- [ ] アプリ画面を実機スクリーンショットへ差し替え
 - [ ] 問い合わせメールアドレスを正式確認
 - [ ] 法務ページをリリース時の実装・外部サービスに合わせて確定
 - [ ] App Store / Google Play公開後にストアURLを追加
