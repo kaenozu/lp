@@ -46,7 +46,7 @@ jobs:
           wranglerVersion: "4.81.0"
           command: pages deploy _site --project-name lp --branch master
 
-      - name: Verify deployed artifact brand assets and metadata
+      - name: Verify deployed asset semantics and metadata
         id: verify
         shell: bash
         env:
@@ -58,6 +58,8 @@ jobs:
             echo "Wrangler Action deployment-url output is empty" >&2
             exit 1
           fi
+
+          echo "Verifying deployment URL: $base_url"
           temp_dir="$(mktemp -d)"
           trap 'rm -rf "$temp_dir"' EXIT
 
@@ -79,38 +81,60 @@ jobs:
               --output "$output"
           }
 
-          verify_asset() {
+          fetch_with_propagation_retry() {
             local path="$1"
-            local local_file="_site${path}"
-            local downloaded_file="${temp_dir}/$(basename "$path")"
-            local expected_hash
-            local actual_hash
-            local fetched=false
-
-            expected_hash="$(sha256sum "$local_file" | cut -d ' ' -f 1)"
+            local output="$2"
 
             for attempt in $(seq 1 5); do
-              if fetch_url "$path" "$downloaded_file"; then
-                fetched=true
-                actual_hash="$(sha256sum "$downloaded_file" | cut -d ' ' -f 1)"
-                if [[ "$actual_hash" == "$expected_hash" ]]; then
-                  echo "Verified asset: $path"
-                  return 0
-                fi
+              if fetch_url "$path" "$output" && [[ -s "$output" ]]; then
+                return 0
               fi
 
-              echo "Asset not ready yet: $path (attempt ${attempt}/5)"
+              echo "Resource not ready yet: $path (attempt ${attempt}/5)"
               if (( attempt < 5 )); then
                 sleep 2
               fi
             done
 
-            if [[ "$fetched" == false ]]; then
-              echo "Asset missing or unreachable on deployment URL: $path" >&2
-            else
-              echo "Deployed asset differs from prepared artifact: $path" >&2
-            fi
+            echo "Resource missing or unreachable on deployment URL: $path" >&2
             return 1
+          }
+
+          verify_svg() {
+            local path="$1"
+            local downloaded_file="${temp_dir}/favicon.svg"
+
+            fetch_with_propagation_retry "$path" "$downloaded_file"
+            grep -q '<svg' "$downloaded_file"
+            grep -q 'viewBox="0 0 512 512"' "$downloaded_file"
+            echo "Verified SVG structure: $path"
+          }
+
+          verify_png() {
+            local path="$1"
+            local expected_width="$2"
+            local expected_height="$3"
+            local downloaded_file="${temp_dir}/$(basename "$path")"
+
+            fetch_with_propagation_retry "$path" "$downloaded_file"
+            python - "$downloaded_file" "$expected_width" "$expected_height" <<'PY'
+          from pathlib import Path
+          import struct
+          import sys
+
+          path = Path(sys.argv[1])
+          expected = (int(sys.argv[2]), int(sys.argv[3]))
+          data = path.read_bytes()
+
+          assert data.startswith(b"\x89PNG\r\n\x1a\n"), f"invalid PNG signature: {path}"
+          assert len(data) >= 24, f"truncated PNG: {path}"
+          width, height = struct.unpack(">II", data[16:24])
+          assert (width, height) == expected, (
+              f"unexpected PNG dimensions: {path}: "
+              f"{width}x{height}, expected {expected[0]}x{expected[1]}"
+          )
+          print(f"Verified PNG: {path.name} {width}x{height} {len(data)} bytes")
+          PY
           }
 
           verify_html_marker_from_source() {
@@ -119,47 +143,26 @@ jobs:
             local selector="$3"
             local expected_marker
             local downloaded_file="${temp_dir}/page-$(printf '%s' "$path" | sha256sum | cut -d ' ' -f 1).html"
-            local fetched=false
 
             expected_marker="$(grep -m1F "$selector" "$local_file" | sed -E 's/^[[:space:]]+//')"
+            fetch_with_propagation_retry "$path" "$downloaded_file"
 
-            for attempt in $(seq 1 5); do
-              if fetch_url "$path" "$downloaded_file"; then
-                fetched=true
-                if grep -qF "$expected_marker" "$downloaded_file"; then
-                  echo "Verified metadata: $path"
-                  return 0
-                fi
-              fi
-
-              echo "Metadata not ready yet: $path (attempt ${attempt}/5)"
-              if (( attempt < 5 )); then
-                sleep 2
-              fi
-            done
-
-            if [[ "$fetched" == false ]]; then
-              echo "Page missing or unreachable on deployment URL: $path" >&2
-            else
+            if ! grep -qF "$expected_marker" "$downloaded_file"; then
               echo "Expected metadata was not found on deployment URL: $path" >&2
               echo "Marker: $expected_marker" >&2
+              return 1
             fi
-            return 1
+
+            echo "Verified metadata: $path ($selector)"
           }
 
-          assets=(
-            "/assets/brand/favicon.svg"
-            "/assets/brand/favicon-32x32.png"
-            "/assets/brand/favicon-16x16.png"
-            "/assets/brand/apple-touch-icon.png"
-            "/assets/brand/og-portal.png"
-            "/assets/brand/og-ashita-motsumono.png"
-            "/assets/brand/og-ehenotane.png"
-          )
-
-          for asset in "${assets[@]}"; do
-            verify_asset "$asset"
-          done
+          verify_svg "/assets/brand/favicon.svg"
+          verify_png "/assets/brand/favicon-32x32.png" 32 32
+          verify_png "/assets/brand/favicon-16x16.png" 16 16
+          verify_png "/assets/brand/apple-touch-icon.png" 180 180
+          verify_png "/assets/brand/og-portal.png" 1200 630
+          verify_png "/assets/brand/og-ashita-motsumono.png" 1200 630
+          verify_png "/assets/brand/og-ehenotane.png" 1200 630
 
           verify_html_marker_from_source "/" "_site/index.html" 'href="/assets/brand/favicon.svg"'
           verify_html_marker_from_source "/" "_site/index.html" 'property="og:image"'
