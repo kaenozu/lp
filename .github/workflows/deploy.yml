@@ -47,13 +47,17 @@ jobs:
           command: pages deploy _site --project-name lp --branch master
 
       - name: Verify deployed artifact brand assets and metadata
+        id: verify
         shell: bash
         env:
           DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment-url }}
         run: |
           set -euo pipefail
           base_url="${DEPLOYMENT_URL%/}"
-          test -n "$base_url"
+          if [[ -z "$base_url" ]]; then
+            echo "Wrangler Action deployment-url output is empty" >&2
+            exit 1
+          fi
           temp_dir="$(mktemp -d)"
           trap 'rm -rf "$temp_dir"' EXIT
 
@@ -163,6 +167,7 @@ jobs:
           verify_html_marker_from_source "/apps/ehenotane/" "_site/apps/ehenotane/index.html" 'property="og:image"'
 
       - name: Smoke test production
+        id: smoke
         shell: bash
         run: |
           set -euo pipefail
@@ -197,7 +202,11 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           COMMIT_SHA: ${{ github.sha }}
           JOB_STATUS: ${{ job.status }}
-          TARGET_URL: https://lp-5t7.pages.dev
+          DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
+          VERIFY_OUTCOME: ${{ steps.verify.outcome }}
+          SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
+          PRODUCTION_URL: https://lp-5t7.pages.dev
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
 
@@ -205,20 +214,32 @@ jobs:
             success)
               state="success"
               description="Cloudflare Pages production deployment succeeded"
+              target_url="$PRODUCTION_URL"
               ;;
             cancelled)
               state="error"
-              description="Cloudflare Pages production deployment was cancelled"
+              description="Cloudflare Pages deployment was cancelled"
+              target_url="$RUN_URL"
               ;;
             *)
               state="failure"
-              description="Cloudflare Pages production deployment failed"
+              target_url="$RUN_URL"
+              if [[ "$DEPLOY_OUTCOME" != "success" ]]; then
+                failed_stage="deploy"
+              elif [[ "$VERIFY_OUTCOME" != "success" ]]; then
+                failed_stage="artifact verification"
+              elif [[ "$SMOKE_OUTCOME" != "success" ]]; then
+                failed_stage="production smoke test"
+              else
+                failed_stage="status reporting"
+              fi
+              description="Cloudflare Pages failed at ${failed_stage}"
               ;;
           esac
 
           payload=$(jq -n \
             --arg state "$state" \
-            --arg target_url "$TARGET_URL" \
+            --arg target_url "$target_url" \
             --arg description "$description" \
             --arg context "cloudflare-pages-production" \
             '{state: $state, target_url: $target_url, description: $description, context: $context}')
