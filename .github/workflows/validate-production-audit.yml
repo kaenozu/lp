@@ -5,6 +5,7 @@ on:
     paths:
       - ".github/workflows/audit-production.yml"
       - ".github/workflows/validate-production-audit.yml"
+      - ".github/workflows/validate-production-browser.yml"
       - "lighthouserc.*.cjs"
       - "tool/capture_production_screenshots.cjs"
       - "tool/test_production_audit.py"
