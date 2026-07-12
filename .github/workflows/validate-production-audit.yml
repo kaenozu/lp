@@ -4,11 +4,14 @@ on:
   pull_request:
     paths:
       - ".github/workflows/audit-production.yml"
+      - ".github/workflows/audit-production-accessibility.yml"
       - ".github/workflows/validate-production-audit.yml"
       - ".github/workflows/validate-production-browser.yml"
       - "lighthouserc.*.cjs"
       - "tool/capture_production_screenshots.cjs"
+      - "tool/audit_production_accessibility.cjs"
       - "tool/test_production_audit.py"
+      - "tool/test_production_accessibility_audit.py"
       - "apps/ashita-motsumono/index.html"
       - "assets/app.js"
       - "assets/styles.css"
@@ -30,6 +33,9 @@ jobs:
           node --check lighthouserc.mobile.cjs
           node --check lighthouserc.desktop.cjs
           node --check tool/capture_production_screenshots.cjs
+          node --check tool/audit_production_accessibility.cjs
 
-      - name: Validate Production audit contract
-        run: python3 -m unittest tool/test_production_audit.py
+      - name: Validate Production audit contracts
+        run: |
+          python3 -m unittest tool/test_production_audit.py
+          python3 -m unittest tool/test_production_accessibility_audit.py
