@@ -6,12 +6,8 @@ const targetUrl = process.env.TARGET_URL;
 const chromePath = process.env.CHROME_PATH;
 const outputDir = process.env.AUDIT_BROWSER_DIR || 'production-audit/browser';
 
-if (!targetUrl) {
-  throw new Error('TARGET_URL is required');
-}
-if (!chromePath) {
-  throw new Error('CHROME_PATH is required');
-}
+if (!targetUrl) throw new Error('TARGET_URL is required');
+if (!chromePath) throw new Error('CHROME_PATH is required');
 
 const viewports = [
   { name: 'mobile', width: 390, height: 844, expectedColumns: 1 },
@@ -20,19 +16,13 @@ const viewports = [
 ];
 
 function assert(condition, message) {
-  if (!condition) {
-    throw new Error(message);
-  }
+  if (!condition) throw new Error(message);
 }
 
 function durationToMilliseconds(value) {
   const first = String(value).split(',')[0].trim();
-  if (first.endsWith('ms')) {
-    return Number.parseFloat(first.slice(0, -2));
-  }
-  if (first.endsWith('s')) {
-    return Number.parseFloat(first.slice(0, -1)) * 1000;
-  }
+  if (first.endsWith('ms')) return Number.parseFloat(first.slice(0, -2));
+  if (first.endsWith('s')) return Number.parseFloat(first.slice(0, -1)) * 1000;
   return Number.NaN;
 }
 
@@ -57,15 +47,8 @@ async function waitForRenderedScreens(page) {
 
 async function openRenderedPage(browser, viewport) {
   const page = await browser.newPage();
-  await page.setViewport({
-    width: viewport.width,
-    height: viewport.height,
-    deviceScaleFactor: 1,
-  });
-  await page.goto(targetUrl, {
-    waitUntil: 'networkidle2',
-    timeout: 60000,
-  });
+  await page.setViewport({ width: viewport.width, height: viewport.height, deviceScaleFactor: 1 });
+  await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
   await waitForRenderedScreens(page);
   return page;
 }
@@ -74,9 +57,7 @@ async function collectLayout(page) {
   return page.evaluate(() => {
     const grid = document.querySelector('.screenshot-grid');
     const items = Array.from(document.querySelectorAll('.screenshot-grid .screenshot-item'));
-    if (!grid) {
-      throw new Error('screenshot grid was not found');
-    }
+    if (!grid) throw new Error('screenshot grid was not found');
 
     const gridStyle = getComputedStyle(grid);
     const rectangles = items.map((item) => {
@@ -88,15 +69,11 @@ async function collectLayout(page) {
         height: Math.round(rect.height * 100) / 100,
       };
     });
-
     const rowCounts = [];
     for (const rectangle of rectangles) {
       const existingRow = rowCounts.find((row) => Math.abs(row.y - rectangle.y) <= 2);
-      if (existingRow) {
-        existingRow.count += 1;
-      } else {
-        rowCounts.push({ y: rectangle.y, count: 1 });
-      }
+      if (existingRow) existingRow.count += 1;
+      else rowCounts.push({ y: rectangle.y, count: 1 });
     }
 
     return {
@@ -133,7 +110,6 @@ function validateLayout(layout, viewport) {
 
 async function captureResponsiveEvidence(browser) {
   const summary = {};
-
   for (const viewport of viewports) {
     const page = await openRenderedPage(browser, viewport);
     try {
@@ -144,47 +120,20 @@ async function captureResponsiveEvidence(browser) {
         height: image.naturalHeight,
         alt: image.alt,
       })));
-
       assert(imageAttributes.length === 4, `${viewport.name}: expected 4 rendered screenshots`);
-      assert(
-        imageAttributes.filter((image) => image.loading === 'eager').length === 1,
-        `${viewport.name}: expected exactly one eager image`,
-      );
-      assert(
-        imageAttributes.filter((image) => image.loading === 'lazy').length === 3,
-        `${viewport.name}: expected exactly three lazy images`,
-      );
-      assert(
-        imageAttributes.filter((image) => image.fetchPriority === 'high').length === 1,
-        `${viewport.name}: expected exactly one high-priority image`,
-      );
-      assert(
-        imageAttributes.every((image) => image.width === 360 && image.height === 640),
-        `${viewport.name}: rendered screenshot dimensions are incorrect`,
-      );
-      assert(
-        imageAttributes.every((image) => image.alt.trim().length > 0),
-        `${viewport.name}: every screenshot must have alt text`,
-      );
+      assert(imageAttributes.filter((image) => image.loading === 'eager').length === 1, `${viewport.name}: expected exactly one eager image`);
+      assert(imageAttributes.filter((image) => image.loading === 'lazy').length === 3, `${viewport.name}: expected exactly three lazy images`);
+      assert(imageAttributes.filter((image) => image.fetchPriority === 'high').length === 1, `${viewport.name}: expected exactly one high-priority image`);
+      assert(imageAttributes.every((image) => image.width === 360 && image.height === 640), `${viewport.name}: rendered screenshot dimensions are incorrect`);
+      assert(imageAttributes.every((image) => image.alt.trim().length > 0), `${viewport.name}: every screenshot must have alt text`);
 
-      await page.screenshot({
-        path: path.join(outputDir, `${viewport.name}-top.png`),
-        type: 'png',
-      });
-
+      await page.screenshot({ path: path.join(outputDir, `${viewport.name}-top.png`), type: 'png' });
       const grid = await page.$('.screenshot-grid');
       assert(grid, `${viewport.name}: screenshot grid handle was not found`);
-      await grid.screenshot({
-        path: path.join(outputDir, `${viewport.name}-screens.png`),
-        type: 'png',
-      });
+      await grid.screenshot({ path: path.join(outputDir, `${viewport.name}-screens.png`), type: 'png' });
 
       const layout = await collectLayout(page);
-      summary[viewport.name] = {
-        viewport,
-        imageAttributes,
-        layout,
-      };
+      summary[viewport.name] = { viewport, imageAttributes, layout };
       await fs.writeFile(
         path.join(outputDir, `${viewport.name}-layout.json`),
         `${JSON.stringify(summary[viewport.name], null, 2)}\n`,
@@ -193,17 +142,12 @@ async function captureResponsiveEvidence(browser) {
       validateLayout(layout, viewport);
 
       if (viewport.name === 'mobile') {
-        await fs.writeFile(
-          path.join(outputDir, 'javascript-enabled.html'),
-          await page.content(),
-          'utf8',
-        );
+        await fs.writeFile(path.join(outputDir, 'javascript-enabled.html'), await page.content(), 'utf8');
       }
     } finally {
       await page.close();
     }
   }
-
   await fs.writeFile(
     path.join(outputDir, 'responsive-layout-summary.json'),
     `${JSON.stringify(summary, null, 2)}\n`,
@@ -216,9 +160,7 @@ async function auditKeyboardFocus(browser) {
   try {
     await page.evaluate(() => {
       window.scrollTo(0, 0);
-      if (document.activeElement instanceof HTMLElement) {
-        document.activeElement.blur();
-      }
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
     });
 
     const focusTrail = [];
@@ -226,13 +168,11 @@ async function auditKeyboardFocus(browser) {
       await page.keyboard.press('Tab');
       focusTrail.push(await page.evaluate(() => {
         const active = document.activeElement;
-        if (!(active instanceof HTMLElement)) {
-          return null;
-        }
+        if (!(active instanceof HTMLElement)) return null;
         const style = getComputedStyle(active);
         return {
           tag: active.tagName,
-          text: active.textContent.trim().replace(/\s+/g, ' ').slice(0, 120),
+          text: (active.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 120),
           href: active instanceof HTMLAnchorElement ? active.getAttribute('href') : null,
           focusVisible: active.matches(':focus-visible'),
           outlineStyle: style.outlineStyle,
@@ -241,6 +181,13 @@ async function auditKeyboardFocus(browser) {
         };
       }));
     }
+
+    await fs.writeFile(
+      path.join(outputDir, 'keyboard-focus.json'),
+      `${JSON.stringify(focusTrail, null, 2)}\n`,
+      'utf8',
+    );
+    await page.screenshot({ path: path.join(outputDir, 'keyboard-focus.png'), type: 'png' });
 
     const usable = focusTrail.filter(Boolean);
     assert(usable.length >= 5, `keyboard: only ${usable.length} focusable elements were reached`);
@@ -252,16 +199,6 @@ async function auditKeyboardFocus(browser) {
       usable.some((entry) => entry.href === '#features') && usable.some((entry) => entry.href === '#usage'),
       'keyboard: primary navigation links were not reached',
     );
-
-    await fs.writeFile(
-      path.join(outputDir, 'keyboard-focus.json'),
-      `${JSON.stringify(focusTrail, null, 2)}\n`,
-      'utf8',
-    );
-    await page.screenshot({
-      path: path.join(outputDir, 'keyboard-focus.png'),
-      type: 'png',
-    });
   } finally {
     await page.close();
   }
@@ -271,31 +208,27 @@ async function auditReducedMotion(browser) {
   const page = await browser.newPage();
   try {
     await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });
-    await page.emulateMediaFeatures([
-      { name: 'prefers-reduced-motion', value: 'reduce' },
-    ]);
+    await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
     await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
     await waitForRenderedScreens(page);
 
     const result = await page.evaluate(() => {
       const hero = document.querySelector('.hero__title');
-      if (!hero) {
-        throw new Error('hero title was not found');
-      }
+      if (!hero) throw new Error('hero title was not found');
       return {
         heroAnimationDuration: getComputedStyle(hero).animationDuration,
         htmlScrollBehavior: getComputedStyle(document.documentElement).scrollBehavior,
       };
     });
-    const duration = durationToMilliseconds(result.heroAnimationDuration);
-    assert(Number.isFinite(duration) && duration <= 0.02, `reduced motion duration is ${result.heroAnimationDuration}`);
-    assert(result.htmlScrollBehavior === 'auto', `reduced motion scroll behavior is ${result.htmlScrollBehavior}`);
-
     await fs.writeFile(
       path.join(outputDir, 'reduced-motion.json'),
       `${JSON.stringify(result, null, 2)}\n`,
       'utf8',
     );
+
+    const duration = durationToMilliseconds(result.heroAnimationDuration);
+    assert(Number.isFinite(duration) && duration <= 0.02, `reduced motion duration is ${result.heroAnimationDuration}`);
+    assert(result.htmlScrollBehavior === 'auto', `reduced motion scroll behavior is ${result.htmlScrollBehavior}`);
   } finally {
     await page.close();
   }
@@ -308,48 +241,31 @@ async function auditScreenshotCssFailure(browser) {
     await page.setRequestInterception(true);
     page.on('request', (request) => {
       let pathname = '';
-      try {
-        pathname = new URL(request.url()).pathname;
-      } catch (_error) {
-        pathname = '';
-      }
-      if (pathname === '/assets/app-screenshots.css') {
-        request.abort('failed');
-      } else {
-        request.continue();
-      }
+      try { pathname = new URL(request.url()).pathname; } catch (_error) { pathname = ''; }
+      if (pathname === '/assets/app-screenshots.css') request.abort('failed');
+      else request.continue();
     });
 
     await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
     await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 1000)));
-
     const result = await page.evaluate(() => ({
       phoneMocks: document.querySelectorAll('.phone-mock').length,
       realScreens: document.querySelectorAll('.real-app-screen').length,
     }));
-    assert(result.phoneMocks === 4, `CSS failure: expected 4 phone mocks, got ${result.phoneMocks}`);
-    assert(result.realScreens === 0, `CSS failure: expected 0 real screens, got ${result.realScreens}`);
 
-    await fs.writeFile(
-      path.join(outputDir, 'screenshot-css-failure.html'),
-      await page.content(),
-      'utf8',
-    );
+    await fs.writeFile(path.join(outputDir, 'screenshot-css-failure.html'), await page.content(), 'utf8');
     await fs.writeFile(
       path.join(outputDir, 'screenshot-css-failure.json'),
       `${JSON.stringify(result, null, 2)}\n`,
       'utf8',
     );
-    await page.screenshot({
-      path: path.join(outputDir, 'screenshot-css-failure-top.png'),
-      type: 'png',
-    });
+    await page.screenshot({ path: path.join(outputDir, 'screenshot-css-failure-top.png'), type: 'png' });
     const grid = await page.$('.screenshot-grid');
     assert(grid, 'CSS failure: screenshot grid was not found');
-    await grid.screenshot({
-      path: path.join(outputDir, 'screenshot-css-failure-screens.png'),
-      type: 'png',
-    });
+    await grid.screenshot({ path: path.join(outputDir, 'screenshot-css-failure-screens.png'), type: 'png' });
+
+    assert(result.phoneMocks === 4, `CSS failure: expected 4 phone mocks, got ${result.phoneMocks}`);
+    assert(result.realScreens === 0, `CSS failure: expected 0 real screens, got ${result.realScreens}`);
   } finally {
     await page.close();
   }
@@ -360,13 +276,8 @@ async function main() {
   const browser = await puppeteer.launch({
     executablePath: chromePath,
     headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-dev-shm-usage',
-      '--font-render-hinting=none',
-    ],
+    args: ['--no-sandbox', '--disable-dev-shm-usage', '--font-render-hinting=none'],
   });
-
   try {
     await captureResponsiveEvidence(browser);
     await auditKeyboardFocus(browser);
