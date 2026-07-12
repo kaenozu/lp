@@ -55,14 +55,18 @@ jobs:
           set -euo pipefail
 
           current_check="initialization"
-          report_failure() {
+          temp_dir=""
+          report_exit() {
             local status=$?
+            if [[ -n "$temp_dir" ]]; then
+              rm -rf "$temp_dir"
+            fi
             if (( status != 0 )); then
               echo "failure=${current_check}" >> "$GITHUB_OUTPUT"
             fi
             exit "$status"
           }
-          trap report_failure EXIT
+          trap report_exit EXIT
 
           current_check="deployment URL output"
           base_url="${DEPLOYMENT_URL%/}"
@@ -73,7 +77,6 @@ jobs:
 
           echo "Verifying deployment URL: $base_url"
           temp_dir="$(mktemp -d)"
-          trap 'rm -rf "$temp_dir"' RETURN
 
           current_check="deployment URL readiness"
           ready=false
