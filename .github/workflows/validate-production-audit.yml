@@ -1,0 +1,31 @@
+name: Validate Production audit
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/audit-production.yml"
+      - ".github/workflows/validate-production-audit.yml"
+      - "lighthouserc.*.cjs"
+      - "tool/test_production_audit.py"
+      - "apps/ashita-motsumono/index.html"
+      - "assets/app.js"
+      - "assets/styles.css"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Check Lighthouse configuration syntax
+        run: |
+          node --check lighthouserc.mobile.cjs
+          node --check lighthouserc.desktop.cjs
+
+      - name: Validate Production audit contract
+        run: python3 -m unittest tool/test_production_audit.py
