@@ -72,6 +72,95 @@ jobs:
               "${base_url}${path}" > /dev/null
           done
 
+      - name: Verify production brand assets and metadata
+        shell: bash
+        env:
+          DEPLOYED_COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          base_url="https://lp-5t7.pages.dev"
+          temp_dir="$(mktemp -d)"
+          trap 'rm -rf "$temp_dir"' EXIT
+
+          fetch_url() {
+            local path="$1"
+            local output="$2"
+            curl \
+              --fail \
+              --silent \
+              --show-error \
+              --location \
+              --connect-timeout 10 \
+              --max-time 30 \
+              "${base_url}${path}?commit=${DEPLOYED_COMMIT}" \
+              --output "$output"
+          }
+
+          verify_asset() {
+            local path="$1"
+            local local_file="_site${path}"
+            local downloaded_file="${temp_dir}/$(basename "$path")"
+            local expected_hash
+            local actual_hash
+
+            expected_hash="$(sha256sum "$local_file" | cut -d ' ' -f 1)"
+
+            for attempt in $(seq 1 10); do
+              if fetch_url "$path" "$downloaded_file"; then
+                actual_hash="$(sha256sum "$downloaded_file" | cut -d ' ' -f 1)"
+                if [[ "$actual_hash" == "$expected_hash" ]]; then
+                  echo "Verified asset: $path"
+                  return 0
+                fi
+              fi
+
+              echo "Asset not current yet: $path (attempt ${attempt}/10)"
+              sleep 3
+            done
+
+            echo "Production asset differs from deployed artifact: $path" >&2
+            return 1
+          }
+
+          verify_html_marker() {
+            local path="$1"
+            local marker="$2"
+            local downloaded_file="${temp_dir}/page-$(printf '%s' "$path" | sha256sum | cut -d ' ' -f 1).html"
+
+            for attempt in $(seq 1 10); do
+              if fetch_url "$path" "$downloaded_file" && grep -qF "$marker" "$downloaded_file"; then
+                echo "Verified metadata: $path"
+                return 0
+              fi
+
+              echo "Metadata not current yet: $path (attempt ${attempt}/10)"
+              sleep 3
+            done
+
+            echo "Expected metadata was not found in Production: $path" >&2
+            echo "Marker: $marker" >&2
+            return 1
+          }
+
+          assets=(
+            "/assets/brand/favicon.svg"
+            "/assets/brand/favicon-32x32.png"
+            "/assets/brand/favicon-16x16.png"
+            "/assets/brand/apple-touch-icon.png"
+            "/assets/brand/og-portal.png"
+            "/assets/brand/og-ashita-motsumono.png"
+            "/assets/brand/og-ehenotane.png"
+          )
+
+          for asset in "${assets[@]}"; do
+            verify_asset "$asset"
+          done
+
+          verify_html_marker "/" 'href="/assets/brand/favicon.svg"'
+          verify_html_marker "/" 'property="og:image" content="https://lp-5t7.pages.dev/assets/brand/og-portal.png"'
+          verify_html_marker "/apps/ashita-motsumono/" 'property="og:image" content="https://lp-5t7.pages.dev/assets/brand/og-ashita-motsumono.png"'
+          verify_html_marker "/apps/ehenotane/" 'property="og:image" content="https://lp-5t7.pages.dev/assets/brand/og-ehenotane.png"'
+
       - name: Report deployment status
         if: always()
         shell: bash
