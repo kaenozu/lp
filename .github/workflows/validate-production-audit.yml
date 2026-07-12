@@ -6,10 +6,12 @@ on:
       - ".github/workflows/audit-production.yml"
       - ".github/workflows/validate-production-audit.yml"
       - "lighthouserc.*.cjs"
+      - "tool/capture_production_screenshots.cjs"
       - "tool/test_production_audit.py"
       - "apps/ashita-motsumono/index.html"
       - "assets/app.js"
       - "assets/styles.css"
+      - "assets/app-screenshots.css"
 
 permissions:
   contents: read
@@ -22,10 +24,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Check Lighthouse configuration syntax
+      - name: Check JavaScript configuration syntax
         run: |
           node --check lighthouserc.mobile.cjs
           node --check lighthouserc.desktop.cjs
+          node --check tool/capture_production_screenshots.cjs
 
       - name: Validate Production audit contract
         run: python3 -m unittest tool/test_production_audit.py
