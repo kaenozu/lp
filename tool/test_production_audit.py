@@ -33,11 +33,13 @@ class ProductionAuditTest(unittest.TestCase):
         self.assertIn("pathname.endsWith('/home-tomorrow.webp')", FALLBACK_SCRIPT)
         self.assertIn('heroMockPresent', FALLBACK_SCRIPT)
 
-    def test_image_fallback_replaces_only_after_load(self) -> None:
+    def test_image_fallback_preloads_before_replacing(self) -> None:
         self.assertIn('replaceMockAfterImageLoad', APP_JS)
-        self.assertIn('image.addEventListener("load"', APP_JS)
-        self.assertIn('image.addEventListener("error"', APP_JS)
-        self.assertLess(APP_JS.index('image.addEventListener("load"'), APP_JS.index('image.src = screenshot.src'))
+        self.assertIn('var preloader = new Image()', APP_JS)
+        self.assertIn('preloader.addEventListener("load"', APP_JS)
+        self.assertIn('preloader.addEventListener("error"', APP_JS)
+        self.assertLess(APP_JS.index('preloader.addEventListener("load"'), APP_JS.index('preloader.src = screenshot.src'))
+        self.assertIn('mock.replaceWith(image)', APP_JS)
         self.assertNotIn('mock.replaceWith(createScreenshotImage', APP_JS)
 
     def test_production_verification_covers_manifest_site(self) -> None:
