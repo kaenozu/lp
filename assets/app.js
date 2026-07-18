@@ -47,28 +47,31 @@ document.addEventListener("DOMContentLoaded", function () {
     if (isHero) {
       image.setAttribute("fetchpriority", "high");
     }
+    image.src = screenshot.src;
     return image;
   }
 
   function replaceMockAfterImageLoad(mock, screenshot, isHero, onSuccess) {
-    var image = createScreenshotImage(screenshot, isHero);
+    var preloader = new Image();
+    preloader.decoding = "async";
 
-    image.addEventListener("load", function () {
+    preloader.addEventListener("load", function () {
       if (!mock.isConnected) {
         return;
       }
+      var image = createScreenshotImage(screenshot, isHero);
       mock.replaceWith(image);
       if (onSuccess) {
         onSuccess();
       }
     }, { once: true });
 
-    image.addEventListener("error", function () {
+    preloader.addEventListener("error", function () {
       // 画像が取得できない場合は、配信HTMLに含まれるモックをそのまま表示する。
-      image.removeAttribute("src");
+      preloader.removeAttribute("src");
     }, { once: true });
 
-    image.src = screenshot.src;
+    preloader.src = screenshot.src;
   }
 
   function showRealScreenshots() {
