@@ -187,7 +187,22 @@ async function auditTwoHundredPercentTextResize(browser) {
     deviceScaleFactor: 1,
   });
   try {
-    await page.addStyleTag({ content: ':root { font-size: 200% !important; }' });
+    await page.evaluate(() => {
+      const writableStyleSheet = Array.from(document.styleSheets).find((styleSheet) => {
+        try {
+          return styleSheet.cssRules !== null;
+        } catch (_error) {
+          return false;
+        }
+      });
+      if (!writableStyleSheet) {
+        throw new Error('no writable same-origin stylesheet was found');
+      }
+      writableStyleSheet.insertRule(
+        ':root { font-size: 200% !important; }',
+        writableStyleSheet.cssRules.length,
+      );
+    });
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
     const result = await page.evaluate(() => {
