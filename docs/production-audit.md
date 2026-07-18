@@ -1,120 +1,118 @@
 # Production表示・Lighthouse・アクセシビリティ監査
 
-Production URL `https://lp-5t7.pages.dev/apps/ashita-motsumono/` を、次のworkflowで継続確認します。
+Production origin `https://lp-5t7.pages.dev`を、次のworkflowで継続確認します。
 
-- `.github/workflows/audit-production.yml`: 表示、フォールバック、キーボード、Lighthouse
-- `.github/workflows/audit-production-accessibility.yml`: 直接アクセス、文書構造、Accessibility Tree、200%テキスト拡大
+- `.github/workflows/audit-production.yml`: 両アプリのブラウザ操作、障害時フォールバック、Lighthouse
+- `.github/workflows/audit-production-accessibility.yml`: 両アプリの文書構造、Accessibility Tree、200%文字拡大
+- `.github/workflows/validate-production-browser.yml`: PR headから生成したローカル`_site`のブラウザ監査
 
-## 実行タイミング
+## PRとProductionの分離
 
-- `Deploy to Cloudflare Pages`が成功した後
-- GitHub Actionsからの手動実行
-- 表示監査は毎週月曜日にも定期実行
-- 関連するPRでは、PR headの監査コードをProductionへ適用してマージ前に確認
+PRでは既存Productionを検査しません。
 
-デプロイ失敗時は監査を実行せず、既存の`cloudflare-pages-production` Statusを正とします。
+1. PR headをcheckout
+2. `tool/prepare_site.sh`で`_site/`を生成
+3. `python3 -m http.server`で`127.0.0.1`へ配信
+4. PR成果物をPuppeteerで検査
 
-## ブラウザ確認
+デプロイ後、手動実行、週次監査ではProduction URLを検査します。これにより、変更前のProductionが正常であることを理由に壊れたPRが通過する問題を防ぎます。
 
-GitHub-hosted runnerのChromeを`puppeteer-core@25.3.0`から操作します。Runnerへ`fonts-noto-cjk`を導入し、監査画像でも日本語を表示できる状態にしてから確認します。
+## 対象アプリ
 
-### 実画面とレスポンシブ配置
+`tool/site_manifest.json`で管理します。
 
-- JavaScript実行後に実装画面4点（先頭1点＋下部3点）が表示される
-- 先頭画像が`loading="eager"`かつ`fetchpriority="high"`である
-- 下部画像3点が`loading="lazy"`である
-- 4画像が360×640で読み込まれている
-- すべての画像に空でないaltテキストがある
-- モバイル390px幅では下部3画面が1列
-- タブレット820px幅では下部3画面が2列
-- PC 1440px幅では下部3画面が3列
-- 各幅でページ全体の横スクロールが発生していない
+| アプリ | ブラウザ操作 | 実画面画像 | Accessibility |
+|---|---|---:|---|
+| あしたもつもの | 実画面表示、フォールバック、フォーカス、reduced motion | 4 | 実画面altを含む |
+| へぇの種 | サンプルクイズ、回答後フォーカス、noscript | 0 | 文書構造と操作UI |
 
-列数はCSSの算出値だけでなく、各カードの実座標からも確認します。下部画面の証跡は`.screenshot-grid`要素自体を撮影するため、ページ内スクロール位置に依存しません。
+## あしたもつもの
 
-### フォールバックとキーボード
+- JavaScript実行後に実画面4点が表示される
+- 先頭画像が`loading="eager"`かつ`fetchpriority="high"`
+- 下部画像3点が`loading="lazy"`
+- 画像は360×640でaltが空でない
+- 390pxでは1列、820pxでは2列、1440pxでは3列
+- JavaScript無効時はHTMLモック4点を維持
+- `app-screenshots.css`失敗時はHTMLモック4点を維持
+- 個別WebP失敗時は該当するHTMLモックだけを維持し、壊れた`img`を残さない
+- Tab操作で主要リンクへ到達できる
+- `prefers-reduced-motion: reduce`でアニメーションとスムーススクロールを抑止
 
-- スクリプトを実行していない配信HTMLに`phone-mock`4点が残る
-- スクリプトを実行していない配信HTMLに実画面画像が注入されていない
-- `/assets/app-screenshots.css`の読み込みを失敗させた場合も`phone-mock`4点が残る
-- キーボードのTab操作で主要ナビゲーションへ到達できる
-- `:focus-visible`で可視のアウトラインが表示される
-- `prefers-reduced-motion: reduce`でアニメーション時間が短縮され、スムーススクロールが無効になる
+## へぇの種
 
-### 文書構造とAccessibility Tree
+- 4つの回答ボタンが表示される
+- 回答後に全ボタンを無効化する
+- 正解と選択した誤答をそれぞれ1件表示する
+- 正答と解説を表示する
+- 結果領域へフォーカスを移動する
+- JavaScript無効時にnoscriptメッセージを表示する
+- 390px、820px、1440pxで横overflowがない
 
-- `/apps/ashita-motsumono/index.html`からアクセスしても実画面4点へ置換される
-- `html[lang]`が日本語である
-- 文書タイトルが空でない
-- `h1`が1件で、見出しレベルに飛びがない
-- `header`、`main`、`footer`が各1件ある
-- ヘッダーとフッターの`nav`に空でない一意のラベルがある
-- すべてのリンクにアクセス可能な名前がある
-- Chrome Accessibility Tree上に画像の代替テキスト4点が公開される
-- Accessibility Tree上にbanner、main、contentinfo、navigation、名前付きレベル1見出しがある
+## Accessibility
 
-### 200%テキスト拡大
+両アプリで次を確認します。
 
-W3C WCAG 2.2のResize Textを基準に、ルート文字サイズを200%へ変更して次を確認します。
+- `/index.html`直接アクセス
+- `html[lang="ja"]`
+- 空でないtitle
+- `h1`が1件で見出しレベルに飛びがない
+- header、main、footerが各1件
+- ヘッダーとフッターのnavに一意のラベルがある
+- リンクにアクセシブルネームがある
+- Chrome Accessibility Treeにbanner、main、contentinfo、navigation、名前付きh1がある
+- 実画面を使用するページではaltがAccessibility Treeへ公開される
+- 200%文字拡大で横overflowとテキスト欠落がない
 
-- 主要セクションが表示されたままである
-- ページ全体に横方向overflowがない
-- `overflow: hidden`または`clip`によるテキスト欠落がない
-- 全ページ画像と実測JSONを保存する
-
-## 画像証跡
-
-- モバイル幅の先頭表示と下部3画面
-- タブレット幅の先頭表示と下部3画面
-- PC幅の先頭表示と下部3画面
-- キーボードフォーカス表示
-- 実画面専用CSS読み込み失敗時の先頭表示と下部HTMLモック
-- `index.html`直接アクセス時の表示
-- 200%テキスト拡大時の全ページ表示
+PR監査ジョブの権限は`contents: read`のみです。Commit Statusの書き込みは、Production監査後の別ジョブに限定します。
 
 ## Lighthouse
 
-`@lhci/cli@0.15.1`を固定して、モバイルとデスクトップを各1回測定します。
+両アプリをモバイルとデスクトップで各3回測定し、中央値を記録します。
 
-記録するカテゴリ:
+基準:
 
-- Performance
-- Accessibility
-- Best Practices
-- SEO
+- Accessibility: 0.95以上
+- Best Practices: 0.90以上
+- SEO: 0.90以上
+- Performance: 0.80未満を警告
 
-導入直後は実測値を取得する段階とし、未確認の閾値でProduction監査を失敗させません。基準値を決める場合は、複数回の実測と変動幅を確認した後に別PRで追加します。
+レポートは次の形式で分離します。
+
+```text
+production-audit/lighthouse/{app-slug}/mobile/
+production-audit/lighthouse/{app-slug}/desktop/
+```
+
+## 全公開URL検証
+
+`tool/verify_remote_site.py`は`sitemap.xml`から全公開URLを取得し、次を確認します。
+
+- HTTP成功
+- HTML Content-Type
+- title
+- canonical
+- `og:url`
+- `og:image`
+- `twitter:image`
+- ブランド資産
+- 実画面スクリーンショット
+- 共通CSSとJavaScript
+
+LP本体だけでなくprivacy、terms、contactも検証対象です。
 
 ## 証跡
 
-Actions artifact `production-lp-audit`へ表示・Lighthouse証跡を30日間保存します。
+Actions artifactへ30日間保存します。
 
-- モバイル／デスクトップLighthouse HTML・JSON
-- `lighthouse-summary.json`
-- 各幅のChromeスクリーンショット
-- 各幅の配置座標と列数JSON
-- キーボードフォーカス結果
-- reduced motion結果
-- JavaScript実行後のDOM
-- スクリプト未実行の配信HTML
-- 実画面専用CSS読み込み失敗時のDOMと画像
+- 各viewportのスクリーンショット
+- レスポンシブ配置JSON
+- クイズ操作結果
+- JavaScript無効時の結果
+- CSS／画像障害時の結果
+- Accessibility Treeと文書構造
+- 200%文字拡大画像とJSON
+- Lighthouse HTML／JSONと集計
 - 日本語フォントの`fc-match`結果
 
-Actions artifact `production-accessibility-audit`へ文書・Accessibility Tree・200%拡大証跡を30日間保存します。
-
-- `index-html-access.json`とPNG
-- `accessibility-semantics.json`
-- `text-resize-200.json`と全ページPNG
-- 日本語フォントの`fc-match`結果
-
-Lighthouseレポートは`filesystem`へ出力し、外部の一時公開ストレージへアップロードしません。
-
-## Commit Status
-
-監査対象のcommitへ次を記録します。
-
-- `production-browser-verification`
-- `lighthouse-production`
-- `production-accessibility-semantics`
-
-Statusのリンク先は該当するGitHub Actions runです。
+外部の一時公開ストレージにはアップロードしません。
