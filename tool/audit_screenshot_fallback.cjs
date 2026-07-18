@@ -33,7 +33,7 @@ async function main() {
       } catch (_error) {
         pathname = '';
       }
-      if (pathname.endsWith('/home-tomorrow.webp') && !failedScreenshotRequest) {
+      if (pathname.endsWith('/review-extraction.webp')) {
         failedScreenshotRequest = true;
         request.abort('failed');
       } else {
@@ -53,14 +53,16 @@ async function main() {
       phoneMocks: document.querySelectorAll('.phone-mock').length,
       realScreens: document.querySelectorAll('.real-app-screen').length,
       brokenImages: Array.from(document.images).filter((image) => image.complete && image.naturalWidth === 0).length,
-      heroMockPresent: Boolean(document.querySelector('.section--mock .phone-mock')),
+      failedGridMockPresent: Boolean(document.querySelector('.screenshot-item:nth-child(2) .phone-mock')),
+      heroIsRealScreen: Boolean(document.querySelector('.section--mock .real-app-screen')),
     }));
 
     assert(failedScreenshotRequest, 'the intended screenshot request was not intercepted');
     assert(result.phoneMocks === 1, `expected one retained mock, got ${result.phoneMocks}`);
     assert(result.realScreens === 3, `expected three loaded screenshots, got ${result.realScreens}`);
     assert(result.brokenImages === 0, `broken image elements remain: ${result.brokenImages}`);
-    assert(result.heroMockPresent, 'hero fallback mock was removed');
+    assert(result.failedGridMockPresent, 'the failed screenshot fallback mock was removed');
+    assert(result.heroIsRealScreen, 'the unaffected hero screenshot was not displayed');
 
     await fs.writeFile(
       path.join(outputDir, 'screenshot-image-failure.json'),
