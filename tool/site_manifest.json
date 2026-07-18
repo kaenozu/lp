@@ -12,6 +12,10 @@
   "apps": [
     {
       "slug": "ashita-motsumono",
+      "display_name": "あしたもつもの",
+      "release_status": "preparing",
+      "google_play_url": null,
+      "app_store_url": null,
       "og_image": "og-ashita-motsumono.png",
       "screenshots": [
         "home-tomorrow.webp",
@@ -22,6 +26,10 @@
     },
     {
       "slug": "ehenotane",
+      "display_name": "へぇの種",
+      "release_status": "preparing",
+      "google_play_url": null,
+      "app_store_url": null,
       "og_image": "og-ehenotane.png",
       "screenshots": [],
       "expected_real_screens": 0
