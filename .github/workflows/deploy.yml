@@ -9,6 +9,9 @@ permissions:
   contents: read
   statuses: write
 
+env:
+  SEARCH_CONSOLE_VERIFICATION: ${{ vars.SEARCH_CONSOLE_VERIFICATION }}
+
 concurrency:
   group: cloudflare-pages-production
   cancel-in-progress: true
@@ -48,10 +51,13 @@ jobs:
           set -euo pipefail
           test -n "$DEPLOYMENT_URL"
           python3 tool/verify_remote_site.py "${DEPLOYMENT_URL%/}" _site
+          python3 tool/check_production_headers.py "${DEPLOYMENT_URL%/}/"
 
       - name: Smoke test Production
         id: smoke
-        run: python3 tool/verify_remote_site.py https://lp-5t7.pages.dev _site
+        run: |
+          python3 tool/verify_remote_site.py https://lp-5t7.pages.dev _site
+          python3 tool/check_production_headers.py https://lp-5t7.pages.dev/
 
       - name: Report deployment statuses
         if: always()
@@ -97,13 +103,13 @@ jobs:
             post_status \
               "cloudflare-pages-production" \
               "success" \
-              "Production deployment and all public URL checks succeeded" \
+              "Production deployment, URLs, assets, and headers verified" \
               "$PRODUCTION_URL"
           else
             post_status \
               "cloudflare-pages-production" \
               "failure" \
-              "Production deployment or public URL verification failed" \
+              "Production deployment or public verification failed" \
               "$RUN_URL"
           fi
 
@@ -111,12 +117,12 @@ jobs:
             post_status \
               "cloudflare-pages-brand-verification" \
               "success" \
-              "Deployment metadata and assets verified" \
+              "Deployment metadata, assets, and headers verified" \
               "$RUN_URL"
           else
             post_status \
               "cloudflare-pages-brand-verification" \
               "failure" \
-              "Deployment metadata or asset verification failed" \
+              "Deployment metadata, asset, or header verification failed" \
               "$RUN_URL"
           fi

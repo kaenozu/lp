@@ -1,16 +1,27 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import struct
 import sys
 import xml.etree.ElementTree as ET
 from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = json.loads((ROOT / "tool/site_manifest.json").read_text(encoding="utf-8"))
 ORIGIN = MANIFEST["origin"].rstrip("/")
+RELEASE_LABELS = {
+    "preparing": "準備中",
+    "published": "公開中",
+    "suspended": "公開停止中",
+}
+STORE_LINK_PATTERNS = (
+    "https://play.google.com/store/apps/details",
+    "https://apps.apple.com/",
+)
 
 
 class HeadParser(HTMLParser):
@@ -102,6 +113,78 @@ def metadata_value(parser: HeadParser, *, property_name: str | None = None, name
     return values
 
 
+def validate_store_url(value: object, store: str, slug: str) -> str | None:
+    if value is None:
+        return None
+    assert_true(isinstance(value, str) and value, f"{store} URL must be null or a non-empty string: {slug}")
+    parsed = urlsplit(value)
+    assert_true(parsed.scheme == "https", f"{store} URL must use HTTPS: {slug}: {value}")
+
+    if store == "google_play":
+        query = parse_qs(parsed.query)
+        assert_true(parsed.netloc == "play.google.com", f"invalid Google Play host: {slug}: {value}")
+        assert_true(parsed.path == "/store/apps/details", f"invalid Google Play path: {slug}: {value}")
+        assert_true(bool(query.get("id", [""])[0]), f"Google Play URL has no package id: {slug}: {value}")
+    elif store == "app_store":
+        assert_true(parsed.netloc == "apps.apple.com", f"invalid App Store host: {slug}: {value}")
+        assert_true("/app/" in parsed.path and re.search(r"/id\d+(?:/|$)", parsed.path) is not None, f"invalid App Store path: {slug}: {value}")
+    else:
+        raise AssertionError(f"unknown store type: {store}")
+    return value
+
+
+def validate_manifest() -> None:
+    apps = MANIFEST.get("apps")
+    assert_true(isinstance(apps, list) and apps, "manifest apps must be a non-empty list")
+    seen: set[str] = set()
+    for app in apps:
+        slug = app.get("slug")
+        assert_true(isinstance(slug, str) and re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", slug) is not None, f"invalid app slug: {slug}")
+        assert_true(slug not in seen, f"duplicate app slug: {slug}")
+        seen.add(slug)
+
+        display_name = app.get("display_name")
+        assert_true(isinstance(display_name, str) and display_name.strip(), f"missing display_name: {slug}")
+        status = app.get("release_status")
+        assert_true(status in RELEASE_LABELS, f"invalid release_status: {slug}: {status}")
+        google_play = validate_store_url(app.get("google_play_url"), "google_play", slug)
+        app_store = validate_store_url(app.get("app_store_url"), "app_store", slug)
+        if status == "published":
+            assert_true(bool(google_play or app_store), f"published app must have a store URL: {slug}")
+
+
+def validate_release_presentation(site: Path) -> None:
+    portal = (site / "index.html").read_text(encoding="utf-8")
+    for app in MANIFEST["apps"]:
+        slug = app["slug"]
+        status = app["release_status"]
+        label = RELEASE_LABELS[status]
+        marker = f'data-app-slug="{slug}"'
+        assert_true(portal.count(marker) == 1, f"portal app card must appear exactly once: {slug}")
+        card_pattern = re.compile(
+            rf'<a\b(?=[^>]*{re.escape(marker)})(?=[^>]*data-release-status="{re.escape(status)}")[^>]*>(.*?)</a>',
+            re.DOTALL,
+        )
+        match = card_pattern.search(portal)
+        assert_true(match is not None, f"portal release state mismatch: {slug}: {status}")
+        card = match.group(1)
+        assert_true(app["display_name"] in card, f"portal display name mismatch: {slug}")
+        assert_true(
+            re.search(rf'data-release-status-label[^>]*>\s*{re.escape(label)}\s*</span>', card) is not None,
+            f"portal release label mismatch: {slug}: {label}",
+        )
+
+        app_index = site / "apps" / slug / "index.html"
+        app_text = app_index.read_text(encoding="utf-8")
+        configured_urls = [url for url in (app["google_play_url"], app["app_store_url"]) if url]
+        if status == "published":
+            for url in configured_urls:
+                assert_true(url in app_text, f"published store URL is missing from app LP: {slug}: {url}")
+        else:
+            for pattern in STORE_LINK_PATTERNS:
+                assert_true(pattern not in app_text, f"non-published app exposes a store link: {slug}: {pattern}")
+
+
 def validate_html(site: Path) -> None:
     expected_paths = page_paths()
     actual_files = sorted(site.rglob("*.html"))
@@ -111,6 +194,7 @@ def validate_html(site: Path) -> None:
     internal_html_link_pattern = re.compile(
         r'href="(?!(?:https?:|mailto:|tel:|#))[^\"]*\.html(?:[?#][^\"]*)?"'
     )
+    expected_verification = os.environ.get("SEARCH_CONSOLE_VERIFICATION", "").strip()
     for url_path in expected_paths:
         path = local_html_path(site, url_path)
         text = path.read_text(encoding="utf-8")
@@ -135,6 +219,14 @@ def validate_html(site: Path) -> None:
         assert_true(og_url == [expected_canonical], f"og:url mismatch: {path}: {og_url}")
         assert_true(og_image == [expected_og(url_path)], f"og:image mismatch: {path}: {og_image}")
         assert_true(twitter_image == og_image, f"twitter:image mismatch: {path}: {twitter_image}")
+
+        verification = metadata_value(parser, name="google-site-verification")
+        if url_path == "/" and expected_verification:
+            assert_true(verification == [expected_verification], f"Search Console verification mismatch: {verification}")
+        elif url_path != "/":
+            assert_true(not verification, f"Search Console verification must only appear on the portal root: {path}")
+
+    validate_release_presentation(site)
 
 
 def validate_assets(site: Path) -> None:
@@ -177,6 +269,7 @@ def validate_sitemap(site: Path) -> None:
 
 def main() -> None:
     site = Path(sys.argv[1] if len(sys.argv) > 1 else ROOT / "_site").resolve()
+    validate_manifest()
     assert_true(site.is_dir(), f"site directory not found: {site}")
     assert_true((site / "_headers").is_file(), "_headers is missing from artifact")
     assert_true(not (site / ".github").exists(), ".github leaked into artifact")
