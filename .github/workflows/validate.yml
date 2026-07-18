@@ -10,6 +10,7 @@ on:
       - "assets/**"
       - "apps/**"
       - "tool/**"
+      - "docs/**"
       - ".github/workflows/**"
 
 permissions:
@@ -38,7 +39,8 @@ jobs:
       - name: Validate site artifact
         run: python3 tool/validate_site.py _site
 
-      - name: Validate audit contracts
+      - name: Validate audit and release-operation contracts
         run: |
           python3 -m unittest tool/test_production_audit.py
           python3 -m unittest tool/test_production_accessibility_audit.py
+          python3 -m unittest tool/test_release_operations.py
