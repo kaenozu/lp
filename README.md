@@ -1,13 +1,15 @@
 # 小さなアプリ工房 — LPサイト
 
-生活、学び、遊び、仕事など、複数ジャンルの個人開発アプリを掲載するポータルです。
-ルートページはアプリ一覧、`/apps/{app-slug}/`は各アプリの専用LPとして運用します。
+生活、学び、遊び、仕事など、複数ジャンルの個人開発アプリを掲載する静的ポータルです。
 
-> [!NOTE]
-> 「小さなアプリ工房」はポータル名です。各アプリの公開IDは`docs/public-identity.md`で管理します。
+- ルート: アプリ一覧
+- `/apps/{app-slug}/`: アプリ専用LP
+- `/apps/{app-slug}/privacy`: プライバシーポリシー
+- `/apps/{app-slug}/terms`: 利用規約
+- `/apps/{app-slug}/contact`: お問い合わせ
 
 > [!IMPORTANT]
-> 「あしたもつもの」の正式名称、問い合わせ先、Production URLは確定済みです。公開表示はひらがなの「あしたもつもの」、問い合わせ先は`kaenozu@gmail.com`、Production originは`https://lp-5t7.pages.dev`へ統一します。
+> 「あしたもつもの」の正式名称、問い合わせ先、Production originは`docs/public-identity.md`で管理します。公開表示は「あしたもつもの」、問い合わせ先は`kaenozu@gmail.com`、Production originは`https://lp-5t7.pages.dev`です。
 
 ## 公開環境
 
@@ -15,137 +17,199 @@
 - Cloudflare Pagesプロジェクト: `lp`
 - 配信方式: Direct Upload
 - Productionブランチ: `master`
-- 自動デプロイ: GitHub Actionsから`wrangler pages deploy`を実行
+- 自動デプロイ: GitHub Actionsの`Deploy to Cloudflare Pages`
 
-このサイトはHTML / CSS / JavaScriptのみで構成され、アプリケーションビルドはありません。
-CSSやJavaScriptはドメインルート基準の絶対パスで参照しています。
+HTML、CSS、JavaScriptだけで構成し、フロントエンドフレームワークは使用していません。
 
-## デプロイ運用
+## 公開物
 
-### Productionデプロイ
-
-`master`へのpushで`.github/workflows/deploy.yml`が実行されます。
-
-ワークフローは次の順序で処理します。
-
-1. 公開専用ディレクトリ`_site/`を生成
-2. 公開対象だけを`_site/`へコピー
-3. Cloudflare Pagesプロジェクト`lp`へデプロイ
-4. デプロイ固有URLでブランド資産とHTMLメタデータを検証
-5. Production主要URLをスモークテスト
-6. Productionとブランド検証のStatusを個別に記録
-
-公開対象は次のファイルとディレクトリだけです。
+`tool/prepare_site.sh`が公開専用ディレクトリ`_site/`を生成します。
 
 ```text
 index.html
 robots.txt
 sitemap.xml
+_headers
 assets/
 apps/
 ```
 
-`.github/`、`README.md`、`docs/`などの開発・運用ファイルは配信しません。
+`.github/`、`docs/`、`tool/`、`README.md`は配信しません。
 
-### デプロイ判定
+`_headers`ではCSP、Permissions Policy、Referrer Policy、MIME sniffing防止、frame制限などを設定します。
 
-デプロイ後は、同じcommitに次のStatusを記録します。
+## アプリmanifest
+
+`tool/site_manifest.json`を公開アプリの単一の定義元として使用します。
+
+manifestで管理する項目:
+
+- URLスラッグ
+- アプリごとのOGP画像
+- 実画面スクリーンショット
+- JavaScript実行後に期待する実画面画像数
+
+`tool/validate_site.py`はmanifestからHTML集合、OGP対応、画像、sitemapを検証します。新しいアプリを追加するとき、HTML数やアプリ名をCIへ個別にハードコードしないでください。
+
+## デプロイ
+
+`master`へのpushで次を実行します。
+
+1. `_site/`を生成
+2. 全JavaScriptの構文を確認
+3. HTML、画像、canonical、OGP、sitemap、内部リンクを検証
+4. Cloudflare Pagesへデプロイ
+5. デプロイ固有URLの全公開ページと資産を検証
+6. Productionの全公開ページと資産を検証
+7. commit statusを記録
+
+記録するStatus:
 
 - `cloudflare-pages-production`
-  - Cloudflare PagesへのデプロイとProduction主要URLのスモークテストが成功した場合に`success`
-  - 成功時のリンク先はProduction URL
 - `cloudflare-pages-brand-verification`
-  - デプロイ固有URL上のfavicon、Apple Touch Icon、OGP画像、HTMLメタデータが検証を通過した場合に`success`
-  - Productionの可用性判定とは分離し、ブランド資産の不整合を独立して報告
+- `production-browser-verification`
+- `lighthouse-production`
+- `production-accessibility-semantics`
 
-ブランド検証に失敗した場合は、失敗した検査名を`cloudflare-pages-brand-failure/{check}`として追加記録します。
+Production検証は`sitemap.xml`に掲載された全ページを対象とします。LPだけでなくprivacy、terms、contactも検査します。
 
-### GitHub Secrets
+## PR検証
 
-リポジトリのActions Secretsに次の2件が必要です。
+PRではProduction URLではなく、PR headから生成した`_site/`を`127.0.0.1`で配信して検査します。
 
-```text
-CLOUDFLARE_API_TOKEN
-CLOUDFLARE_ACCOUNT_ID
-```
+### 静的検証
 
-Secretの値はREADME、Issue、PR、ログへ記載しないでください。
+`.github/workflows/validate.yml`
 
-### 手動実行
+- 公開物の許可リスト
+- manifestとHTML集合の一致
+- 全ページのcanonical、`og:url`、OGP、Twitter Card
+- `.html`付き内部リンクの禁止
+- PNG／WebPの形式と寸法
+- sitemapの完全一致
+- 全JavaScriptの構文
+- Production監査コードの契約テスト
 
-`Deploy to Cloudflare Pages`は`workflow_dispatch`に対応しています。
-空コミットを作らず、GitHub Actions画面から手動実行できます。
+### ブラウザ検証
 
-### PR検証
+`.github/workflows/validate-production-browser.yml`
 
-サイトまたはワークフローを変更するPRでは、`.github/workflows/validate.yml`が公開物の構成を検証します。
+「あしたもつもの」:
 
-- 必須ファイルが`_site/`へコピーされること
-- `assets/`と`apps/`が含まれること
-- `.github/`と`README.md`が公開物へ混入しないこと
-- ブランド資産7点が存在し、PNGの形式・寸法・透明度・ファイルサイズが要件を満たすこと
-- あしたもつものの実装画面3点がWebP形式・360×640で存在し、表示用JavaScriptから参照されること
-- 全9 HTMLに対応するfavicon、OGP、Twitter Cardが1件ずつ設定されていること
-- `.html`拡張子付き内部リンクが含まれないこと
+- 実画面4点の表示
+- eager／lazy／fetchpriority
+- 390px、820px、1440pxの配置
+- 横overflow
+- キーボードフォーカス
+- reduced motion
+- JavaScript無効時のHTMLモック
+- スクリーンショットCSS失敗時のHTMLモック
+- WebP画像失敗時のHTMLモック
 
-GitHub Actionsの依存関係は`.github/dependabot.yml`で週次確認します。
+「へぇの種」:
+
+- 4択クイズの回答処理
+- 正解／不正解表示
+- 回答後のフォーカス移動
+- 全選択肢の無効化
+- noscript表示
+- 390px、820px、1440pxの横overflow
+
+### アクセシビリティ検証
+
+`.github/workflows/audit-production-accessibility.yml`
+
+両アプリについて次を確認します。
+
+- `/index.html`直接アクセス
+- `html[lang]`
+- 見出し階層
+- header、main、footer、nav
+- リンクのアクセシブルネーム
+- Chrome Accessibility Tree
+- 画像代替テキスト
+- 200%文字拡大
+- テキスト欠落と横overflow
+
+PRジョブは`contents: read`のみです。Status書き込みはデプロイ後または手動Production監査の別ジョブに限定します。
+
+## Production定期監査
+
+`.github/workflows/audit-production.yml`はデプロイ成功後、手動実行、毎週月曜日に実行します。
+
+- 両アプリのブラウザ操作
+- フォールバック
+- Lighthouse mobile／desktop
+- 各モード3回測定
+- Accessibility 0.95以上
+- Best Practices 0.90以上
+- SEO 0.90以上
+- Performance 0.80未満は警告
+
+レポートとスクリーンショットはGitHub Actions artifactに30日保存し、外部の一時公開ストレージへアップロードしません。
 
 ## ローカル確認
 
-HTMLファイルを直接開かず、リポジトリルートで静的サーバーを起動してください。
-
 ```bash
-python -m http.server 8123
+bash tool/prepare_site.sh
+python3 tool/validate_site.py _site
+python3 -m unittest tool/test_production_audit.py
+python3 -m unittest tool/test_production_accessibility_audit.py
+python3 -m http.server 8123 --directory _site
 ```
 
-ブラウザで`http://localhost:8123`へアクセスします。
+ブラウザで`http://127.0.0.1:8123`へアクセスします。HTMLファイルを直接開くとルート絶対パスのCSSやJavaScriptを正しく確認できません。
 
-## ファイル構成
+全JavaScriptの構文確認:
+
+```bash
+while IFS= read -r -d '' file; do
+  node --check "$file"
+done < <(find _site tool -type f \( -name '*.js' -o -name '*.cjs' \) -print0 | sort -z)
+```
+
+## 主な構成
 
 ```text
 /
 ├── .github/
-│   ├── dependabot.yml                   # GitHub Actions依存更新
+│   ├── dependabot.yml
 │   └── workflows/
-│       ├── deploy.yml                   # master→Cloudflare Pages Production
-│       └── validate.yml                 # PR用公開物検証
-├── index.html                           # ポータル
-├── robots.txt                           # クロール設定
-├── sitemap.xml                          # 公開URL一覧
-├── README.md                            # このファイル
+│       ├── deploy.yml
+│       ├── validate.yml
+│       ├── validate-production-audit.yml
+│       ├── validate-production-browser.yml
+│       ├── audit-production.yml
+│       └── audit-production-accessibility.yml
+├── _headers
+├── index.html
+├── robots.txt
+├── sitemap.xml
+├── lighthouserc.mobile.cjs
+├── lighthouserc.desktop.cjs
 ├── assets/
-│   ├── styles.css                       # 共通CSS
-│   ├── app.js                           # 共通JavaScript・実画面表示
-│   ├── app-screenshots.css              # 実画面スクリーンショット用CSS
-│   ├── apps/
-│   │   └── ashita-motsumono/
-│   │       └── screenshots/
-│   │           ├── home-tomorrow.webp
-│   │           ├── review-extraction.webp
-│   │           └── all-complete.webp
+│   ├── styles.css
+│   ├── app.js
+│   ├── app-screenshots.css
+│   ├── apps/ashita-motsumono/screenshots/
 │   └── brand/
-│       ├── favicon.svg                  # ファビコン（SVG）
-│       ├── favicon-32x32.png            # ファビコン（32x32）
-│       ├── favicon-16x16.png            # ファビコン（16x16）
-│       ├── apple-touch-icon.png         # Apple Touch Icon（180x180）
-│       ├── og-portal.png               # ポータルOGP（1200x630）
-│       ├── og-ashita-motsumono.png      # あしたもつものOGP（1200x630）
-│       ├── og-ehenotane.png            # へぇの種OGP（1200x630）
-│       └── generate_assets.py          # アセット生成スクリプト
 ├── apps/
 │   ├── ashita-motsumono/
-│   │   ├── index.html
-│   │   ├── privacy.html
-│   │   ├── terms.html
-│   │   └── contact.html
 │   └── ehenotane/
-│       ├── index.html
-│       ├── privacy.html
-│       ├── terms.html
-│       └── contact.html
+├── tool/
+│   ├── site_manifest.json
+│   ├── prepare_site.sh
+│   ├── validate_site.py
+│   ├── verify_remote_site.py
+│   ├── capture_production_screenshots.cjs
+│   ├── audit_screenshot_fallback.cjs
+│   ├── audit_ehenotane.cjs
+│   ├── audit_production_accessibility.cjs
+│   └── test_production_*.py
 └── docs/
     ├── app-lp-template.md
     ├── new-app-checklist.md
+    ├── production-audit.md
     └── public-identity.md
 ```
 
@@ -159,82 +223,24 @@ python -m http.server 8123
 /apps/{slug}/contact
 ```
 
-リポジトリ内の実ファイル名は`privacy.html`、`terms.html`、`contact.html`のまま維持します。
-内部リンク、`canonical`、`og:url`、`sitemap.xml`には`.html`を含めません。
-
-## 技術方針
-
-- HTML / CSS / JavaScript
-- 外部フロントエンドライブラリなし
-- モバイルファースト
-- `:focus-visible`、`aria-label`、`prefers-reduced-motion`対応
-- title、description、OGP、Twitter Card、canonical対応
-- robots.txt / sitemap.xml対応
+実ファイル名は`privacy.html`、`terms.html`、`contact.html`です。内部リンク、canonical、`og:url`、sitemapに`.html`を含めません。
 
 ## 新アプリの追加
 
-新アプリを追加する場合は、`docs/app-lp-template.md`と`docs/new-app-checklist.md`を参照してください。
+`docs/app-lp-template.md`と`docs/new-app-checklist.md`を使用してください。
 
-### ルートカード
+最低限更新する項目:
 
-- 個別LPあり: `<a href="/apps/{slug}/" class="card card--block">...</a>`
-- 構想中: `<div class="card card--disabled">...</div>`
-
-構想中カードにはリンクを付けません。
-仕様未確定の機能を説明文で確定させないでください。
-
-凍結したプロジェクトは、過去資料やGit履歴を削除せず、公開中のアプリ一覧から外します。
-
-### アプリディレクトリ
-
-各アプリは`apps/{slug}/`へ配置します。
-
-```text
-index.html
-privacy.html
-terms.html
-contact.html
-```
-
-新しい公開URLを追加した場合は、次も更新します。
-
-- ルートページのカード
-- フッター導線
+- `apps/{slug}/`の4ページ
+- `tool/site_manifest.json`
+- ルートカード
 - `sitemap.xml`
-- 必要に応じてOGP画像
-- Productionスモークテスト対象
+- `assets/brand/og-{slug}.png`
+- 操作可能なUIがある場合はPuppeteer監査
 
-## 公開・運用チェックリスト
-
-### 完了済み
-
-- [x] Production URLで公開
-- [x] canonicalと`og:url`をProductionのextensionless URLへ統一
-- [x] robots.txtへsitemapを指定
-- [x] sitemap.xmlへ公開9 URLを掲載
-- [x] GitHub ActionsからCloudflare Pagesへデプロイする構成を追加
-- [x] 公開専用ディレクトリ`_site/`を使用
-- [x] Production主要URLのスモークテストを追加
-- [x] GitHub Actionsをフルcommit SHAへ固定
-- [x] Dependabotを設定
-- [x] GitHub ActionsのProductionデプロイ成功を確認し、Issue #2をClose
-- [x] Productionとブランド検証のStatusを分離
-- [x] 配信済みブランド資産とHTMLメタデータの意味検証を追加
-- [x] 正式faviconへ差し替え
-- [x] 正式OGP画像へ差し替え
-- [x] あしたもつものを実装済みFlutter画面のスクリーンショットへ差し替え
-- [x] 正式なサービス名を「あしたもつもの」に確定
-- [x] Productionでは`pages.dev`を継続利用すると決定
-- [x] 問い合わせ先を`kaenozu@gmail.com`に確定
-
-### 継続確認
+## 継続確認
 
 - [ ] Google Search Consoleへ登録
-- [ ] 法務ページをリリース時の実装・外部サービスに合わせて確定
-- [ ] App Store / Google Play公開後にストアURLを追加
-- [ ] LighthouseをProductionで測定
-- [ ] スマホ・タブレット・キーボード操作をリリースごとに確認
-
-## 関連Issue
-
-Cloudflareの旧Workers Builds誤接続と自動ProductionデプロイはIssue #2で追跡し、GitHub Actionsへの切り替えとProduction成功確認後に`completed`でCloseしました。
+- [ ] 各アプリの公開直前に実装と法務ページを再照合
+- [ ] Google Play公開後に正式ストアURLへCTAを変更
+- [ ] 実機スマートフォン、タブレット、キーボード操作をリリースごとに確認

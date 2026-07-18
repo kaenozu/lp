@@ -1,160 +1,127 @@
 # アプリLPテンプレート
 
-> このファイルは、新アプリのランディングページ（LP）を作成する際のテンプレートです。
-> 既存の `apps/ashita-motsumono/` を参照に、必要なファイルと変更箇所をまとめています。
+新しいアプリLPを追加するときは、現在のextensionless URL、ブランド資産配置、manifest駆動の検証に合わせます。
 
-## ディレクトリ構成テンプレート
+## 1. アプリディレクトリ
 
-新アプリのスラッグを `my-app` とした場合：
+スラッグを`my-app`とした場合、次の4ファイルを作成します。
 
-```
-apps/
-└── my-app/
-    ├── index.html        # アプリ紹介LP（メインページ）
-    ├── privacy.html      # プライバシーポリシー
-    ├── terms.html        # 利用規約
-    └── contact.html      # お問い合わせ
+```text
+apps/my-app/
+├── index.html
+├── privacy.html
+├── terms.html
+└── contact.html
 ```
 
-assets/ 以下は全アプリで共通です。
-OGP画像は `assets/ogp-my-app.png` のようにアプリごとに用意します。
+リポジトリ内のファイル名には`.html`を使用しますが、公開リンクには`.html`を含めません。
 
-## 必須ファイル一覧
+```text
+/apps/my-app/
+/apps/my-app/privacy
+/apps/my-app/terms
+/apps/my-app/contact
+```
 
-| ファイル | 役割 |
-|---|---|
-| `index.html` | アプリの紹介LP。特徴、使い方、FAQ、CTAを配置するメインページ |
-| `privacy.html` | プライバシーポリシー。外部サービスやデータ取得の扱いを明記 |
-| `terms.html` | 利用規約。利用条件、禁止事項、免責事項を記載 |
-| `contact.html` | お問い合わせページ。リリース情報受け取りや要望送信用の導線を設置 |
+## 2. 公開manifest
 
-## 各ファイルの役割
+`tool/site_manifest.json`の`apps`へアプリを追加します。
 
-### index.html
-- ファーストビュー：アプリ名とキャッチコピー
-- 特徴セクション：どのような課題を解決するか
-- 使い方セクション：利用ステップの説明
-- 画面イメージ：モックアップやスクリーンショット
-- FAQ：よくある質問と回答
-- CTA：リリース情報受け取りやお問い合わせへの誘導
+```json
+{
+  "slug": "my-app",
+  "og_image": "og-my-app.png",
+  "screenshots": [],
+  "expected_real_screens": 0
+}
+```
 
-### privacy.html / terms.html / contact.html
-- アプリ名とポリシー名を明記
-- 更新日（制定日）を記載
-- 外部サービスを利用する場合は、サービス名・提供元・取得データ・目的を明記
-- お問い合わせ導線を設置
+- `screenshots`: `assets/apps/{slug}/screenshots/`に置く実画面画像名
+- `expected_real_screens`: JavaScript実行後に表示される実画面画像数
+- 実画面を使用しないLPは空配列と`0`を指定
 
-## OGP画像の仕様
+HTML数、OGP対応、sitemap、ブラウザ監査対象をコードへ個別にハードコードしないでください。
 
-- ファイル名：`assets/ogp-{slug}.png`
-  - 例：`assets/ogp-ashita-motsumono.png`
-- サイズ：1200×630（横長）
-- 形式：PNG
-- 配置場所：`/assets/` 直下
-- ルートページ用の `assets/ogp.png` とは別に、各アプリ専用のOGP画像を用意する
+## 3. OGP画像
 
-## 共通CSS/JSの参照方法
+```text
+assets/brand/og-my-app.png
+```
 
-全ページで以下のパスを絶対パスで参照する：
+要件:
+
+- PNG
+- 1200×630
+- 1MB未満
+- HTMLの`og:image`と`twitter:image`を同じURLへ統一
+
+## 4. 共通資産
+
+全ページでドメインルート基準の絶対パスを使用します。
 
 ```html
+<link rel="icon" href="/assets/brand/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/styles.css">
 <script src="/assets/app.js"></script>
 ```
 
-Cloudflare Pages などの静的ホスティングでドメイン直下に公開する前提のため、
-必ず先頭に `/` をつけた絶対パスで記述すること。
+アプリ固有JavaScriptがある場合は、共通JavaScriptの後に読み込みます。
 
-## ナビゲーションのパターン
+## 5. URLとmetaタグ
 
-### header の構成例
+各ページに次を1件ずつ設定します。
 
-```html
-<header class="header">
-  <div class="container header__inner">
-    <a href="/apps/{slug}/" class="header__logo">{アプリ名}</a>
-    <nav class="header__nav" aria-label="メインナビゲーション">
-      <a href="#features">できること</a>
-      <a href="#usage">使い方</a>
-      <a href="#faq">よくある質問</a>
-    </nav>
-    <a href="mailto:{メールアドレス}?subject={件名}" class="btn btn--primary btn--sm header__cta">リリース情報を受け取る</a>
-  </div>
-</header>
-```
+- `title`
+- `meta[name="description"]`
+- `link[rel="canonical"]`
+- `meta[property="og:title"]`
+- `meta[property="og:description"]`
+- `meta[property="og:url"]`
+- `meta[property="og:image"]`
+- `meta[name="twitter:card"]`
+- `meta[name="twitter:image"]`
 
-- ロゴ（アプリ名）は自ページのLP（`/apps/{slug}/`）へリンク
-- ナビゲーションはLP内のセクションへのアンカーリンク
-- CTAボタンでお問い合わせやリリース情報受け取りへの導線を確保
-
-## フッターの共通リンク
-
-各ページのフッターに以下を設置：
+例:
 
 ```html
-<footer class="footer">
-  <div class="container footer__inner">
-    <nav class="footer__nav" aria-label="フッターナビゲーション">
-      <a href="/apps/{slug}/">{アプリ名}</a>
-      <a href="/apps/{slug}/privacy.html">プライバシーポリシー</a>
-      <a href="/apps/{slug}/terms.html">利用規約</a>
-      <a href="/apps/{slug}/contact.html">お問い合わせ</a>
-    </nav>
-    <p class="footer__copy">&copy; <span data-year></span> {アプリ名}</p>
-  </div>
-</footer>
+<link rel="canonical" href="https://lp-5t7.pages.dev/apps/my-app/privacy">
+<meta property="og:url" content="https://lp-5t7.pages.dev/apps/my-app/privacy">
+<meta property="og:image" content="https://lp-5t7.pages.dev/assets/brand/og-my-app.png">
+<meta name="twitter:image" content="https://lp-5t7.pages.dev/assets/brand/og-my-app.png">
 ```
 
-- アプリ名リンク：自LPへ戻る
-- プライバシーポリシー・利用規約・お問い合わせ：同一アプリ配下へのリンク
-
-## metaタグのテンプレート
-
-各ページの `<head>` に以下を記載。`{slug}` と `{app名}` を実際の値に置き換えること。
+## 6. 内部リンク
 
 ```html
-<title>{ページタイトル} | {アプリ名}</title>
-<meta name="description" content="{ページの説明文（120文字程度）}">
-<meta property="og:title" content="{og:title}">
-<meta property="og:description" content="{og:description}">
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://{ドメイン}/apps/{slug}/">
-<meta property="og:image" content="https://{ドメイン}/assets/ogp-{slug}.png">
-<meta name="twitter:card" content="summary_large_image">
-<link rel="canonical" href="https://{ドメイン}/apps/{slug}/">
-<link rel="icon" href="/assets/favicon.png">
-<link rel="stylesheet" href="/assets/styles.css">
+<a href="/apps/my-app/">アプリLP</a>
+<a href="/apps/my-app/privacy">プライバシーポリシー</a>
+<a href="/apps/my-app/terms">利用規約</a>
+<a href="/apps/my-app/contact">お問い合わせ</a>
 ```
 
-## カスタマイズすべき箇所一覧
+`privacy.html`のような公開リンクは禁止です。CIが検出します。
 
-新アプリを作成する際、以下の箇所を必ず変更する：
+## 7. 法務ページ
 
-1. **アプリ名**
-   - title, og:title, ロゴテキスト, フッターコピー, 見出し内のテキスト
+公開前に、実際のアプリ実装と一致するように次を確定します。
 
-2. **スラッグ**
-   - ディレクトリ名, リンクの href, og:url, canonical, og:image
+- 取得・保存する情報
+- 外部送信の有無
+- SDKと外部サービス
+- 広告、課金、分析、クラッシュレポート
+- データ削除方法
+- 問い合わせ先
+- 免責条項と適用法令上の制限
 
-3. **メールアドレス**
-   - mailto: リンク全般
-   - privacy.html / terms.html / contact.html のお問い合わせ先
+公開用ページにTODO注記を残さないでください。
 
-4. **metaタグ**
-   - description
-   - og:title, og:description, og:url, og:image
-   - canonical
+## 8. 追加時に更新するファイル
 
-5. **制定日**
-   - privacy.html, terms.html の「初版制定日」
+- `tool/site_manifest.json`
+- ルート`index.html`のカード
+- `sitemap.xml`
+- `assets/brand/og-{slug}.png`
+- 必要に応じてアプリ固有CSS／JavaScript／スクリーンショット
+- ブラウザ操作がある場合は専用Puppeteer監査
 
-6. **外部サービス**
-   - privacy.html の「外部サービス」セクション
-   - 利用するサービスが確定したら追記する
-
-7. **OGP画像**
-   - `assets/ogp-{slug}.png` を用意する（1200×630）
-
-8. **カードリンク（ルートページ）**
-   - `index.html` の `.card-grid` に新アプリのカードを追加
-   - カテゴリ、ステータス（準備中/構想中）を設定
+`tool/prepare_site.sh`と`tool/validate_site.py`はmanifestから検証するため、通常はアプリ名ごとの分岐を追加しません。

@@ -5,9 +5,13 @@ const puppeteer = require('puppeteer-core');
 const targetUrl = process.env.TARGET_URL;
 const chromePath = process.env.CHROME_PATH;
 const outputDir = process.env.ACCESSIBILITY_AUDIT_DIR || 'production-audit/accessibility';
+const expectedRealScreens = Number.parseInt(process.env.EXPECT_REAL_SCREENS || '0', 10);
 
 if (!targetUrl) throw new Error('TARGET_URL is required');
 if (!chromePath) throw new Error('CHROME_PATH is required');
+if (!Number.isInteger(expectedRealScreens) || expectedRealScreens < 0) {
+  throw new Error('EXPECT_REAL_SCREENS must be a non-negative integer');
+}
 
 const directIndexUrl = new URL('index.html', targetUrl).href;
 
@@ -19,36 +23,37 @@ function protocolValue(property) {
   return property && typeof property === 'object' ? property.value : undefined;
 }
 
-async function waitForRenderedScreens(page) {
-  await page.waitForFunction(
-    () => document.querySelectorAll('.real-app-screen').length === 4,
-    { timeout: 30000 },
-  );
-  await page.$eval('.screenshot-grid', (grid) => {
-    grid.scrollIntoView({ block: 'center', inline: 'nearest' });
-  });
-  await page.waitForFunction(
-    () => {
-      const images = Array.from(document.querySelectorAll('.real-app-screen'));
-      return images.length === 4 && images.every((image) => image.complete && image.naturalWidth > 0);
-    },
-    { timeout: 30000 },
-  );
+async function waitForReady(page) {
+  if (expectedRealScreens > 0) {
+    await page.waitForFunction(
+      (expected) => document.querySelectorAll('.real-app-screen').length === expected,
+      { timeout: 30000 },
+      expectedRealScreens,
+    );
+    await page.waitForFunction(
+      (expected) => {
+        const images = Array.from(document.querySelectorAll('.real-app-screen'));
+        return images.length === expected && images.every((image) => image.complete && image.naturalWidth > 0);
+      },
+      { timeout: 30000 },
+      expectedRealScreens,
+    );
+  }
   await page.evaluate(() => document.fonts.ready.then(() => true));
   await page.evaluate(() => window.scrollTo(0, 0));
 }
 
-async function openRenderedPage(browser, url, viewport = { width: 1280, height: 1000, deviceScaleFactor: 1 }) {
+async function openPage(browser, url, viewport = { width: 1280, height: 1000, deviceScaleFactor: 1 }) {
   const page = await browser.newPage();
   await page.setViewport(viewport);
   const response = await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
   assert(response && response.status() < 400, `${url}: navigation failed`);
-  await waitForRenderedScreens(page);
+  await waitForReady(page);
   return page;
 }
 
 async function auditDirectIndexAccess(browser) {
-  const page = await openRenderedPage(browser, directIndexUrl, {
+  const page = await openPage(browser, directIndexUrl, {
     width: 390,
     height: 844,
     deviceScaleFactor: 1,
@@ -60,27 +65,24 @@ async function auditDirectIndexAccess(browser) {
       pathname: window.location.pathname,
       realScreens: document.querySelectorAll('.real-app-screen').length,
       phoneMocks: document.querySelectorAll('.phone-mock').length,
+      h1Count: document.querySelectorAll('h1').length,
     }), directIndexUrl);
 
-    await fs.writeFile(
-      path.join(outputDir, 'index-html-access.json'),
-      `${JSON.stringify(result, null, 2)}\n`,
-      'utf8',
-    );
-    await page.screenshot({
-      path: path.join(outputDir, 'index-html-access.png'),
-      type: 'png',
-    });
+    await fs.writeFile(path.join(outputDir, 'index-html-access.json'), `${JSON.stringify(result, null, 2)}\n`, 'utf8');
+    await page.screenshot({ path: path.join(outputDir, 'index-html-access.png'), type: 'png' });
 
-    assert(result.realScreens === 4, `index.html: expected 4 real screens, got ${result.realScreens}`);
-    assert(result.phoneMocks === 0, `index.html: expected 0 phone mocks, got ${result.phoneMocks}`);
+    assert(result.h1Count === 1, `index.html: expected one h1, got ${result.h1Count}`);
+    assert(result.realScreens === expectedRealScreens, `index.html: expected ${expectedRealScreens} real screens, got ${result.realScreens}`);
+    if (expectedRealScreens > 0) {
+      assert(result.phoneMocks === 0, `index.html: expected 0 phone mocks, got ${result.phoneMocks}`);
+    }
   } finally {
     await page.close();
   }
 }
 
 async function auditDocumentSemantics(browser) {
-  const page = await openRenderedPage(browser, targetUrl);
+  const page = await openPage(browser, targetUrl);
   try {
     const dom = await page.evaluate(() => {
       const headings = Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6')).map((heading) => ({
@@ -135,17 +137,9 @@ async function auditDocumentSemantics(browser) {
 
     const result = {
       dom,
-      accessibilityTree: {
-        images: axImages,
-        landmarks: axLandmarks,
-        headings: axHeadings,
-      },
+      accessibilityTree: { images: axImages, landmarks: axLandmarks, headings: axHeadings },
     };
-    await fs.writeFile(
-      path.join(outputDir, 'accessibility-semantics.json'),
-      `${JSON.stringify(result, null, 2)}\n`,
-      'utf8',
-    );
+    await fs.writeFile(path.join(outputDir, 'accessibility-semantics.json'), `${JSON.stringify(result, null, 2)}\n`, 'utf8');
 
     assert(dom.language === 'ja', `expected document language ja, got ${dom.language}`);
     assert(dom.title.trim().length > 0, 'document title is empty');
@@ -166,10 +160,10 @@ async function auditDocumentSemantics(browser) {
     assert(new Set(dom.landmarks.navigation.map((nav) => nav.label)).size === 2, 'navigation landmark labels are not unique');
     assert(dom.links.every((link) => link.name.length > 0), 'a link has no accessible text');
 
-    assert(dom.images.length === 4, `expected 4 DOM images, got ${dom.images.length}`);
+    assert(dom.images.length === expectedRealScreens, `expected ${expectedRealScreens} DOM images, got ${dom.images.length}`);
     assert(dom.images.every((image) => image.alt.trim().length > 0), 'a screenshot alt text is empty');
     assert(dom.images.every((image) => image.width === 360 && image.height === 640), 'a screenshot has incorrect dimensions');
-    assert(axImages.length >= 4, `expected at least 4 accessibility image nodes, got ${axImages.length}`);
+    assert(axImages.length >= expectedRealScreens, `expected at least ${expectedRealScreens} accessibility image nodes, got ${axImages.length}`);
     for (const image of dom.images) {
       assert(axImages.some((node) => node.name === image.alt), `alt text is absent from accessibility tree: ${image.alt}`);
     }
@@ -187,7 +181,7 @@ async function auditDocumentSemantics(browser) {
 }
 
 async function auditTwoHundredPercentTextResize(browser) {
-  const page = await openRenderedPage(browser, targetUrl, {
+  const page = await openPage(browser, targetUrl, {
     width: 720,
     height: 900,
     deviceScaleFactor: 1,
@@ -197,7 +191,7 @@ async function auditTwoHundredPercentTextResize(browser) {
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
     const result = await page.evaluate(() => {
-      const keySelectors = ['h1', '.hero__sub', '.hero__desc', '.hero__actions', '#features', '#usage', '#faq', '.screenshot-grid'];
+      const keySelectors = ['h1', '.hero__desc', '.hero__actions', 'main section', 'footer'];
       const keyElements = keySelectors.map((selector) => {
         const element = document.querySelector(selector);
         if (!element) return { selector, exists: false };
@@ -235,16 +229,8 @@ async function auditTwoHundredPercentTextResize(browser) {
       };
     });
 
-    await fs.writeFile(
-      path.join(outputDir, 'text-resize-200.json'),
-      `${JSON.stringify(result, null, 2)}\n`,
-      'utf8',
-    );
-    await page.screenshot({
-      path: path.join(outputDir, 'text-resize-200.png'),
-      type: 'png',
-      fullPage: true,
-    });
+    await fs.writeFile(path.join(outputDir, 'text-resize-200.json'), `${JSON.stringify(result, null, 2)}\n`, 'utf8');
+    await page.screenshot({ path: path.join(outputDir, 'text-resize-200.png'), type: 'png', fullPage: true });
 
     assert(result.rootFontSize === '32px', `expected 32px root font size, got ${result.rootFontSize}`);
     assert(

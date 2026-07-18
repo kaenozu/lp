@@ -8,14 +8,10 @@ on:
       - ".github/workflows/validate-production-audit.yml"
       - ".github/workflows/validate-production-browser.yml"
       - "lighthouserc.*.cjs"
-      - "tool/capture_production_screenshots.cjs"
-      - "tool/audit_production_accessibility.cjs"
-      - "tool/test_production_audit.py"
-      - "tool/test_production_accessibility_audit.py"
-      - "apps/ashita-motsumono/index.html"
-      - "assets/app.js"
-      - "assets/styles.css"
-      - "assets/app-screenshots.css"
+      - "tool/**"
+      - "apps/**"
+      - "assets/**"
+      - "_headers"
 
 permissions:
   contents: read
@@ -23,17 +19,20 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Check JavaScript configuration syntax
+        shell: bash
         run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do
+            node --check "$file"
+          done < <(find tool -type f -name '*.cjs' -print0 | sort -z)
           node --check lighthouserc.mobile.cjs
           node --check lighthouserc.desktop.cjs
-          node --check tool/capture_production_screenshots.cjs
-          node --check tool/audit_production_accessibility.cjs
 
       - name: Validate Production audit contracts
         run: |

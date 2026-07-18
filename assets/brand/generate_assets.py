@@ -110,7 +110,12 @@ def generate_og_image(
     mark_size = 260
     mark_x = width - mark_size - 80
     mark_y = (height - mark_size) // 2
-    draw_favicon_mark(draw, offset_x=mark_x, offset_y=mark_y)
+    draw_favicon_mark(
+        draw,
+        offset_x=mark_x,
+        offset_y=mark_y,
+        scale=mark_size / 512,
+    )
 
     title_font = ImageFont.truetype(str(font_path), 56)
     description_font = ImageFont.truetype(str(font_path), 26)

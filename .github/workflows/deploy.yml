@@ -1,6 +1,3 @@
-# masterブランチへのプッシュ時にCloudflare Pagesへ自動デプロイ
-# Direct Upload方式のPagesプロジェクトへWrangler経由で配信する
-
 name: Deploy to Cloudflare Pages
 
 on:
@@ -19,23 +16,19 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Prepare site artifact
-        shell: bash
+      - name: Prepare and validate site artifact
         run: |
-          set -euo pipefail
-          rm -rf _site
-          mkdir -p _site
-          cp index.html robots.txt sitemap.xml _site/
-          cp -R assets apps _site/
-          test -f _site/index.html
-          test -d _site/assets
-          test -d _site/apps
+          bash tool/prepare_site.sh
+          python3 tool/validate_site.py _site
+          while IFS= read -r -d '' file; do
+            node --check "$file"
+          done < <(find _site -type f -name '*.js' -print0 | sort -z)
 
       - name: Deploy to Cloudflare Pages
         id: deploy
@@ -46,255 +39,19 @@ jobs:
           wranglerVersion: "4.81.0"
           command: pages deploy _site --project-name lp --branch master
 
-      - name: Verify deployed asset semantics and metadata
+      - name: Verify deployment-specific URL
         id: verify
         continue-on-error: true
-        shell: bash
         env:
           DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment-url }}
         run: |
           set -euo pipefail
+          test -n "$DEPLOYMENT_URL"
+          python3 tool/verify_remote_site.py "${DEPLOYMENT_URL%/}" _site
 
-          current_check="initialization"
-          temp_dir=""
-          report_exit() {
-            local status=$?
-            if [[ -n "$temp_dir" ]]; then
-              rm -rf "$temp_dir"
-            fi
-            if (( status != 0 )); then
-              echo "failure=${current_check}" >> "$GITHUB_OUTPUT"
-            fi
-            exit "$status"
-          }
-          trap report_exit EXIT
-
-          current_check="deployment URL output"
-          base_url="${DEPLOYMENT_URL%/}"
-          if [[ -z "$base_url" ]]; then
-            echo "Wrangler Action deployment-url output is empty" >&2
-            exit 1
-          fi
-
-          echo "Verifying deployment URL: $base_url"
-          temp_dir="$(mktemp -d)"
-
-          current_check="deployment URL readiness"
-          ready=false
-          for attempt in $(seq 1 20); do
-            if curl \
-              --fail \
-              --silent \
-              --show-error \
-              --location \
-              --connect-timeout 5 \
-              --max-time 10 \
-              "${base_url}/" \
-              --output "${temp_dir}/ready.html"; then
-              ready=true
-              echo "Deployment URL is ready (attempt ${attempt}/20)"
-              break
-            fi
-
-            echo "Deployment URL not ready yet (attempt ${attempt}/20)"
-            if (( attempt < 20 )); then
-              sleep 3
-            fi
-          done
-
-          if [[ "$ready" != true ]]; then
-            echo "Deployment URL did not become ready: $base_url" >&2
-            exit 1
-          fi
-
-          fetch_url() {
-            local path="$1"
-            local output="$2"
-
-            curl \
-              --fail \
-              --silent \
-              --show-error \
-              --location \
-              --retry 2 \
-              --retry-delay 1 \
-              --retry-all-errors \
-              --connect-timeout 5 \
-              --max-time 15 \
-              "${base_url}${path}" \
-              --output "$output"
-
-            test -s "$output"
-          }
-
-          verify_svg() {
-            local path="$1"
-            local downloaded_file="${temp_dir}/favicon.svg"
-
-            fetch_url "$path" "$downloaded_file"
-            grep -q '<svg' "$downloaded_file"
-            grep -q 'viewBox="0 0 512 512"' "$downloaded_file"
-            echo "Verified SVG structure: $path"
-          }
-
-          verify_png() {
-            local path="$1"
-            local expected_width="$2"
-            local expected_height="$3"
-            local downloaded_file="${temp_dir}/$(basename "$path")"
-
-            fetch_url "$path" "$downloaded_file"
-            python - "$downloaded_file" "$expected_width" "$expected_height" <<'PY'
-          from pathlib import Path
-          import struct
-          import sys
-
-          path = Path(sys.argv[1])
-          expected = (int(sys.argv[2]), int(sys.argv[3]))
-          data = path.read_bytes()
-
-          assert data.startswith(b"\x89PNG\r\n\x1a\n"), f"invalid PNG signature: {path}"
-          assert len(data) >= 24, f"truncated PNG: {path}"
-          width, height = struct.unpack(">II", data[16:24])
-          assert (width, height) == expected, (
-              f"unexpected PNG dimensions: {path}: "
-              f"{width}x{height}, expected {expected[0]}x{expected[1]}"
-          )
-          print(f"Verified PNG: {path.name} {width}x{height} {len(data)} bytes")
-          PY
-          }
-
-          verify_html_metadata_from_source() {
-            local path="$1"
-            local local_file="$2"
-            local check_type="$3"
-            local downloaded_file="${temp_dir}/page-$(printf '%s' "$path" | sha256sum | cut -d ' ' -f 1).html"
-
-            fetch_url "$path" "$downloaded_file"
-            python - "$local_file" "$downloaded_file" "$check_type" <<'PY'
-          from html.parser import HTMLParser
-          from pathlib import Path
-          import sys
-
-
-          class MetadataParser(HTMLParser):
-              def __init__(self):
-                  super().__init__()
-                  self.elements = []
-
-              def handle_starttag(self, tag, attrs):
-                  self.elements.append((tag.lower(), dict(attrs)))
-
-              def handle_startendtag(self, tag, attrs):
-                  self.handle_starttag(tag, attrs)
-
-
-          def parse(path):
-              parser = MetadataParser()
-              parser.feed(Path(path).read_text(encoding="utf-8"))
-              return parser.elements
-
-
-          local_elements = parse(sys.argv[1])
-          remote_elements = parse(sys.argv[2])
-          check_type = sys.argv[3]
-
-          if check_type == "favicon":
-              def favicon_hrefs(elements):
-                  return [
-                      attrs.get("href")
-                      for tag, attrs in elements
-                      if tag == "link"
-                      and "icon" in attrs.get("rel", "").split()
-                      and attrs.get("href", "").endswith("/favicon.svg")
-                  ]
-
-              expected = favicon_hrefs(local_elements)
-              actual = favicon_hrefs(remote_elements)
-              assert expected == ["/assets/brand/favicon.svg"], expected
-              assert actual == expected, (actual, expected)
-              print(f"Verified favicon metadata: {actual[0]}")
-          elif check_type == "og-image":
-              def og_images(elements):
-                  return [
-                      attrs.get("content")
-                      for tag, attrs in elements
-                      if tag == "meta" and attrs.get("property") == "og:image"
-                  ]
-
-              expected = og_images(local_elements)
-              actual = og_images(remote_elements)
-              assert len(expected) == 1 and expected[0], expected
-              assert actual == expected, (actual, expected)
-              print(f"Verified og:image metadata: {actual[0]}")
-          else:
-              raise AssertionError(f"unknown HTML metadata check: {check_type}")
-          PY
-          }
-
-          current_check="favicon SVG"
-          verify_svg "/assets/brand/favicon.svg"
-
-          current_check="favicon 32x32 PNG"
-          verify_png "/assets/brand/favicon-32x32.png" 32 32
-
-          current_check="favicon 16x16 PNG"
-          verify_png "/assets/brand/favicon-16x16.png" 16 16
-
-          current_check="Apple touch icon PNG"
-          verify_png "/assets/brand/apple-touch-icon.png" 180 180
-
-          current_check="portal OGP PNG"
-          verify_png "/assets/brand/og-portal.png" 1200 630
-
-          current_check="ashita OGP PNG"
-          verify_png "/assets/brand/og-ashita-motsumono.png" 1200 630
-
-          current_check="ehenotane OGP PNG"
-          verify_png "/assets/brand/og-ehenotane.png" 1200 630
-
-          current_check="portal favicon metadata"
-          verify_html_metadata_from_source "/" "_site/index.html" "favicon"
-
-          current_check="portal OGP metadata"
-          verify_html_metadata_from_source "/" "_site/index.html" "og-image"
-
-          current_check="ashita OGP metadata"
-          verify_html_metadata_from_source "/apps/ashita-motsumono/" "_site/apps/ashita-motsumono/index.html" "og-image"
-
-          current_check="ehenotane OGP metadata"
-          verify_html_metadata_from_source "/apps/ehenotane/" "_site/apps/ehenotane/index.html" "og-image"
-
-          trap - EXIT
-          rm -rf "$temp_dir"
-
-      - name: Smoke test production
+      - name: Smoke test Production
         id: smoke
-        shell: bash
-        run: |
-          set -euo pipefail
-          base_url="https://lp-5t7.pages.dev"
-          paths=(
-            "/"
-            "/robots.txt"
-            "/sitemap.xml"
-            "/apps/ashita-motsumono/"
-            "/apps/ehenotane/"
-          )
-
-          for path in "${paths[@]}"; do
-            curl \
-              --fail \
-              --silent \
-              --show-error \
-              --location \
-              --retry 10 \
-              --retry-delay 3 \
-              --retry-all-errors \
-              --connect-timeout 10 \
-              --max-time 30 \
-              "${base_url}${path}" > /dev/null
-          done
+        run: python3 tool/verify_remote_site.py https://lp-5t7.pages.dev _site
 
       - name: Report deployment statuses
         if: always()
@@ -303,10 +60,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
           COMMIT_SHA: ${{ github.sha }}
-          JOB_STATUS: ${{ job.status }}
           DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
           VERIFY_OUTCOME: ${{ steps.verify.outcome }}
-          VERIFY_FAILURE: ${{ steps.verify.outputs.failure }}
           SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
           PRODUCTION_URL: https://lp-5t7.pages.dev
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -318,15 +73,13 @@ jobs:
             local state="$2"
             local description="$3"
             local target_url="$4"
-            local payload
-
-            payload=$(jq -n \
+            jq -n \
               --arg state "$state" \
               --arg target_url "$target_url" \
               --arg description "$description" \
               --arg context "$context" \
-              '{state: $state, target_url: $target_url, description: $description, context: $context}')
-
+              '{state: $state, target_url: $target_url, description: $description, context: $context}' \
+              > status.json
             curl \
               --fail-with-body \
               --silent \
@@ -335,60 +88,35 @@ jobs:
               --header "Accept: application/vnd.github+json" \
               --header "Authorization: Bearer ${GH_TOKEN}" \
               --header "X-GitHub-Api-Version: 2022-11-28" \
+              --data @status.json \
               "https://api.github.com/repos/${REPOSITORY}/statuses/${COMMIT_SHA}" \
-              --data "$payload" > /dev/null
+              > /dev/null
           }
 
-          if [[ "$JOB_STATUS" == "cancelled" ]]; then
-            production_state="error"
-            production_description="Cloudflare Pages deployment was cancelled"
-            production_target="$RUN_URL"
-          elif [[ "$DEPLOY_OUTCOME" != "success" ]]; then
-            production_state="failure"
-            production_description="Cloudflare Pages failed at deploy"
-            production_target="$RUN_URL"
-          elif [[ "$SMOKE_OUTCOME" != "success" ]]; then
-            production_state="failure"
-            production_description="Cloudflare Pages failed at production smoke test"
-            production_target="$RUN_URL"
+          if [[ "$DEPLOY_OUTCOME" == "success" && "$SMOKE_OUTCOME" == "success" ]]; then
+            post_status \
+              "cloudflare-pages-production" \
+              "success" \
+              "Production deployment and all public URL checks succeeded" \
+              "$PRODUCTION_URL"
           else
-            production_state="success"
-            production_description="Cloudflare Pages production deployment succeeded"
-            production_target="$PRODUCTION_URL"
+            post_status \
+              "cloudflare-pages-production" \
+              "failure" \
+              "Production deployment or public URL verification failed" \
+              "$RUN_URL"
           fi
 
-          post_status \
-            "cloudflare-pages-production" \
-            "$production_state" \
-            "$production_description" \
-            "$production_target"
-
-          if [[ "$DEPLOY_OUTCOME" == "success" ]]; then
-            if [[ "$VERIFY_OUTCOME" == "success" ]]; then
-              brand_state="success"
-              brand_description="Deployed brand assets and metadata verified"
-            else
-              brand_state="failure"
-              brand_description="Brand verification failed: ${VERIFY_FAILURE:-unknown check}"
-            fi
-
+          if [[ "$DEPLOY_OUTCOME" == "success" && "$VERIFY_OUTCOME" == "success" ]]; then
             post_status \
               "cloudflare-pages-brand-verification" \
-              "$brand_state" \
-              "$brand_description" \
+              "success" \
+              "Deployment metadata and assets verified" \
               "$RUN_URL"
-
-            if [[ "$VERIFY_OUTCOME" != "success" ]]; then
-              failure_slug=$(printf '%s' "${VERIFY_FAILURE:-unknown-check}" \
-                | tr '[:upper:] ' '[:lower:]-' \
-                | tr -cd '[:alnum:]-' \
-                | cut -c1-55)
-              failure_slug="${failure_slug:-unknown-check}"
-
-              post_status \
-                "cloudflare-pages-brand-failure/${failure_slug}" \
-                "failure" \
-                "Brand verification failed at ${VERIFY_FAILURE:-unknown check}" \
-                "$RUN_URL"
-            fi
+          else
+            post_status \
+              "cloudflare-pages-brand-verification" \
+              "failure" \
+              "Deployment metadata or asset verification failed" \
+              "$RUN_URL"
           fi

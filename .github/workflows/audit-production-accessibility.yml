@@ -1,4 +1,4 @@
-name: Audit Production accessibility
+name: Audit accessibility
 
 on:
   workflow_run:
@@ -7,19 +7,14 @@ on:
   pull_request:
     paths:
       - ".github/workflows/audit-production-accessibility.yml"
-      - "tool/audit_production_accessibility.cjs"
-      - "apps/ashita-motsumono/index.html"
-      - "assets/app.js"
-      - "assets/styles.css"
-      - "assets/app-screenshots.css"
+      - "tool/**"
+      - "apps/**"
+      - "assets/**"
+      - "_headers"
   workflow_dispatch:
 
-permissions:
-  contents: read
-  statuses: write
-
 concurrency:
-  group: production-accessibility-${{ github.event.pull_request.number || 'production' }}
+  group: accessibility-${{ github.event.pull_request.number || github.event.workflow_run.head_sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -27,12 +22,18 @@ jobs:
     if: >-
       github.event_name != 'workflow_run' ||
       github.event.workflow_run.conclusion == 'success'
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
-    timeout-minutes: 12
-    env:
-      TARGET_URL: https://lp-5t7.pages.dev/apps/ashita-motsumono/
-      ACCESSIBILITY_AUDIT_DIR: production-audit/accessibility
-      AUDIT_SHA: ${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha || github.sha }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - slug: ashita-motsumono
+            expected_real_screens: 4
+          - slug: ehenotane
+            expected_real_screens: 0
 
     steps:
       - name: Checkout audited revision
@@ -40,15 +41,45 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha || github.sha }}
 
+      - name: Prepare pull request artifact
+        if: github.event_name == 'pull_request'
+        run: bash tool/prepare_site.sh
+
+      - name: Start pull request site server
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 8123 --directory _site > /tmp/lp-http-server.log 2>&1 &
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent http://127.0.0.1:8123/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/lp-http-server.log
+          exit 1
+
+      - name: Resolve target URL
+        shell: bash
+        env:
+          SLUG: ${{ matrix.slug }}
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            origin="http://127.0.0.1:8123"
+          else
+            origin="https://lp-5t7.pages.dev"
+          fi
+          echo "TARGET_URL=${origin}/apps/${SLUG}/" >> "$GITHUB_ENV"
+          echo "ACCESSIBILITY_AUDIT_DIR=production-audit/accessibility/${SLUG}" >> "$GITHUB_ENV"
+
       - name: Locate Chrome
         shell: bash
         run: |
           set -euo pipefail
           chrome_path="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
-          if [[ -z "$chrome_path" ]]; then
-            echo "::error::Chrome or Chromium was not found on the runner"
-            exit 1
-          fi
+          test -n "$chrome_path"
           echo "CHROME_PATH=$chrome_path" >> "$GITHUB_ENV"
           "$chrome_path" --version
 
@@ -59,67 +90,50 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends fonts-noto-cjk
           fc-cache -f
-
           mkdir -p "$ACCESSIBILITY_AUDIT_DIR"
           fc-match :lang=ja | tee "$ACCESSIBILITY_AUDIT_DIR/japanese-font-match.txt"
           grep -qi 'Noto' "$ACCESSIBILITY_AUDIT_DIR/japanese-font-match.txt"
-
-          npm install \
-            --no-save \
-            --package-lock=false \
-            --ignore-scripts \
-            puppeteer-core@25.3.0
-
-      - name: Wait for Production readiness
-        shell: bash
-        run: |
-          set -euo pipefail
-          for attempt in $(seq 1 20); do
-            if curl \
-              --fail \
-              --silent \
-              --show-error \
-              --location \
-              --connect-timeout 5 \
-              --max-time 15 \
-              "$TARGET_URL" > /dev/null; then
-              echo "Production is ready (attempt ${attempt}/20)"
-              exit 0
-            fi
-            if (( attempt < 20 )); then sleep 3; fi
-          done
-          echo "::error::Production did not become ready: $TARGET_URL"
-          exit 1
+          npm install --no-save --package-lock=false --ignore-scripts puppeteer-core@25.3.0
 
       - name: Audit direct access, semantics and text resize
-        id: accessibility
+        env:
+          EXPECT_REAL_SCREENS: ${{ matrix.expected_real_screens }}
         run: node tool/audit_production_accessibility.cjs
 
-      - name: Upload accessibility audit evidence
+      - name: Upload accessibility evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: production-accessibility-audit
-          path: production-audit/accessibility/
+          name: accessibility-${{ matrix.slug }}-${{ github.run_id }}
+          path: production-audit/accessibility/${{ matrix.slug }}/
           if-no-files-found: warn
           retention-days: 30
 
-      - name: Record Production accessibility status
-        if: always()
+  record-status:
+    if: >-
+      always() &&
+      github.event_name != 'pull_request' &&
+      (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
+    needs: audit-accessibility
+    permissions:
+      statuses: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record accessibility status
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          AUDIT_RESULT: ${{ needs.audit-accessibility.result }}
+          AUDIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          AUDIT_OUTCOME: ${{ steps.accessibility.outcome }}
         run: |
           set -euo pipefail
           state=failure
-          description="Production accessibility semantics audit failed"
-          if [[ "$AUDIT_OUTCOME" == "success" ]]; then
+          description="Accessibility audit failed for one or more apps"
+          if [[ "$AUDIT_RESULT" == "success" ]]; then
             state=success
-            description="Index access, semantics, AX names and 200% text resize verified"
+            description="Both app accessibility, semantics and 200% resize verified"
           fi
-
           jq -n \
             --arg state "$state" \
             --arg target_url "$RUN_URL" \
@@ -127,7 +141,6 @@ jobs:
             --arg context "production-accessibility-semantics" \
             '{state: $state, target_url: $target_url, description: $description, context: $context}' \
             > status.json
-
           curl \
             --fail-with-body \
             --silent \

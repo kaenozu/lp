@@ -1,29 +1,27 @@
-name: Validate Production browser audit
+name: Validate browser behavior
 
 on:
   pull_request:
     paths:
       - ".github/workflows/audit-production.yml"
       - ".github/workflows/validate-production-browser.yml"
-      - "tool/capture_production_screenshots.cjs"
-      - "assets/app.js"
-      - "assets/styles.css"
-      - "assets/app-screenshots.css"
+      - "tool/**"
+      - "index.html"
+      - "apps/**"
+      - "assets/**"
+      - "_headers"
 
 permissions:
   contents: read
 
 concurrency:
-  group: production-browser-pr-${{ github.event.pull_request.number }}
+  group: browser-pr-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
   validate-browser:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
-    env:
-      TARGET_URL: https://lp-5t7.pages.dev/apps/ashita-motsumono/
-      AUDIT_BROWSER_DIR: production-audit/browser
+    timeout-minutes: 15
 
     steps:
       - name: Checkout pull request head
@@ -31,15 +29,30 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
+      - name: Prepare pull request artifact
+        run: bash tool/prepare_site.sh
+
+      - name: Start local site server
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 8123 --directory _site > /tmp/lp-http-server.log 2>&1 &
+          echo $! > /tmp/lp-http-server.pid
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent http://127.0.0.1:8123/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/lp-http-server.log
+          exit 1
+
       - name: Locate Chrome
         shell: bash
         run: |
           set -euo pipefail
           chrome_path="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
-          if [[ -z "$chrome_path" ]]; then
-            echo "::error::Chrome or Chromium was not found on the runner"
-            exit 1
-          fi
+          test -n "$chrome_path"
           echo "CHROME_PATH=$chrome_path" >> "$GITHUB_ENV"
           "$chrome_path" --version
 
@@ -50,25 +63,27 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends fonts-noto-cjk
           fc-cache -f
+          npm install --no-save --package-lock=false --ignore-scripts puppeteer-core@25.3.0
 
-          mkdir -p "$AUDIT_BROWSER_DIR"
-          fc-match :lang=ja | tee "$AUDIT_BROWSER_DIR/japanese-font-match.txt"
-          grep -qi 'Noto' "$AUDIT_BROWSER_DIR/japanese-font-match.txt"
+      - name: Audit あしたもつもの
+        env:
+          TARGET_URL: http://127.0.0.1:8123/apps/ashita-motsumono/
+          AUDIT_BROWSER_DIR: production-audit/browser/ashita-motsumono
+        run: |
+          node tool/capture_production_screenshots.cjs
+          node tool/audit_screenshot_fallback.cjs
 
-          npm install \
-            --no-save \
-            --package-lock=false \
-            --ignore-scripts \
-            puppeteer-core@25.3.0
-
-      - name: Run Production browser evidence audit
-        run: node tool/capture_production_screenshots.cjs
+      - name: Audit へぇの種
+        env:
+          TARGET_URL: http://127.0.0.1:8123/apps/ehenotane/
+          AUDIT_BROWSER_DIR: production-audit/browser/ehenotane
+        run: node tool/audit_ehenotane.cjs
 
       - name: Upload browser audit evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: production-browser-pr-audit-${{ github.event.pull_request.number }}
+          name: browser-pr-audit-${{ github.event.pull_request.number }}
           path: production-audit/browser/
           if-no-files-found: warn
           retention-days: 7

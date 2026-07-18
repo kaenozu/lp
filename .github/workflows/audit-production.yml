@@ -8,10 +8,6 @@ on:
   schedule:
     - cron: "23 3 * * 1"
 
-permissions:
-  contents: read
-  statuses: write
-
 concurrency:
   group: production-lp-audit
   cancel-in-progress: true
@@ -21,11 +17,10 @@ jobs:
     if: >-
       github.event_name != 'workflow_run' ||
       github.event.workflow_run.conclusion == 'success'
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
-    timeout-minutes: 25
-    env:
-      TARGET_URL: https://lp-5t7.pages.dev/apps/ashita-motsumono/
-      AUDIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+    timeout-minutes: 35
 
     steps:
       - name: Checkout audited revision
@@ -33,108 +28,71 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
+      - name: Prepare expected artifact
+        run: |
+          bash tool/prepare_site.sh
+          python3 tool/validate_site.py _site
+
       - name: Locate Chrome
         shell: bash
         run: |
           set -euo pipefail
           chrome_path="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
-          if [[ -z "$chrome_path" ]]; then
-            echo "::error::Chrome or Chromium was not found on the runner"
-            exit 1
-          fi
+          test -n "$chrome_path"
           echo "CHROME_PATH=$chrome_path" >> "$GITHUB_ENV"
           "$chrome_path" --version
 
-      - name: Install Japanese fonts and browser audit tooling
+      - name: Install browser audit tooling
         shell: bash
         run: |
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends fonts-noto-cjk
           fc-cache -f
-
           mkdir -p production-audit/browser
           fc-match :lang=ja | tee production-audit/browser/japanese-font-match.txt
           grep -qi 'Noto' production-audit/browser/japanese-font-match.txt
+          npm install --no-save --package-lock=false --ignore-scripts puppeteer-core@25.3.0
+          npm install --global @lhci/cli@0.15.1
 
-          npm install \
-            --no-save \
-            --package-lock=false \
-            --ignore-scripts \
-            puppeteer-core@25.3.0
-
-      - name: Wait for Production readiness
+      - name: Verify all Production pages and assets
         id: readiness
-        shell: bash
-        run: |
-          set -euo pipefail
-          for attempt in $(seq 1 20); do
-            if curl \
-              --fail \
-              --silent \
-              --show-error \
-              --location \
-              --connect-timeout 5 \
-              --max-time 15 \
-              "$TARGET_URL" > /dev/null; then
-              echo "Production is ready (attempt ${attempt}/20)"
-              exit 0
-            fi
-            if (( attempt < 20 )); then
-              sleep 3
-            fi
-          done
-          echo "::error::Production did not become ready: $TARGET_URL"
-          exit 1
+        run: python3 tool/verify_remote_site.py https://lp-5t7.pages.dev _site
 
-      - name: Capture browser and fallback evidence
-        id: browser
-        shell: bash
+      - name: Capture あしたもつもの browser evidence
+        id: ashita-browser
         env:
-          AUDIT_BROWSER_DIR: production-audit/browser
+          TARGET_URL: https://lp-5t7.pages.dev/apps/ashita-motsumono/
+          AUDIT_BROWSER_DIR: production-audit/browser/ashita-motsumono
         run: |
           set -euo pipefail
-          output_dir="$AUDIT_BROWSER_DIR"
-          mkdir -p "$output_dir"
-
-          curl \
-            --fail \
-            --silent \
-            --show-error \
-            --location \
-            --retry 2 \
-            --retry-delay 1 \
-            --retry-all-errors \
-            --connect-timeout 5 \
-            --max-time 15 \
-            "$TARGET_URL" \
-            > "$output_dir/javascript-disabled.html"
-          test -s "$output_dir/javascript-disabled.html"
-
-          fallback_count="$(grep -o 'class="phone-mock"' "$output_dir/javascript-disabled.html" | wc -l)"
-          test "$fallback_count" -eq 4
-          if grep -q 'class="real-app-screen"' "$output_dir/javascript-disabled.html"; then
-            echo "::error::Real screenshots were present in the served HTML fallback"
-            exit 1
-          fi
-
+          mkdir -p "$AUDIT_BROWSER_DIR"
+          curl --fail --silent --show-error --location "$TARGET_URL" > "$AUDIT_BROWSER_DIR/javascript-disabled.html"
+          test "$(grep -o 'class="phone-mock"' "$AUDIT_BROWSER_DIR/javascript-disabled.html" | wc -l)" -eq 4
           node tool/capture_production_screenshots.cjs
+          node tool/audit_screenshot_fallback.cjs
 
-      - name: Install Lighthouse CI
-        shell: bash
-        run: npm install --global @lhci/cli@0.15.1
+      - name: Capture へぇの種 browser evidence
+        id: ehenotane-browser
+        env:
+          TARGET_URL: https://lp-5t7.pages.dev/apps/ehenotane/
+          AUDIT_BROWSER_DIR: production-audit/browser/ehenotane
+        run: node tool/audit_ehenotane.cjs
 
-      - name: Collect mobile and desktop Lighthouse reports
+      - name: Collect Lighthouse reports for both apps
         id: lighthouse
         shell: bash
-        env:
-          LHCI_TARGET_URL: ${{ env.TARGET_URL }}
         run: |
           set -euo pipefail
           rm -rf production-audit/lighthouse .lighthouseci
-          lhci autorun --config=./lighthouserc.mobile.cjs
-          rm -rf .lighthouseci
-          lhci autorun --config=./lighthouserc.desktop.cjs
+          for slug in ashita-motsumono ehenotane; do
+            export LHCI_TARGET_URL="https://lp-5t7.pages.dev/apps/${slug}/"
+            export LHCI_APP_SLUG="$slug"
+            lhci autorun --config=./lighthouserc.mobile.cjs
+            rm -rf .lighthouseci
+            lhci autorun --config=./lighthouserc.desktop.cjs
+            rm -rf .lighthouseci
+          done
 
       - name: Summarize Lighthouse scores
         id: summarize
@@ -144,52 +102,57 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import json
-          import os
+          import statistics
 
           root = Path('production-audit/lighthouse')
           categories = ('performance', 'accessibility', 'best-practices', 'seo')
+          apps = ('ashita-motsumono', 'ehenotane')
+          payload = {}
 
-          def read_scores(mode):
-              manifest = json.loads((root / mode / 'manifest.json').read_text(encoding='utf-8'))
-              representative = next((entry for entry in manifest if entry.get('isRepresentativeRun')), manifest[0])
-              summary = representative['summary']
-              return {name: round(float(summary[name]) * 100) for name in categories}
+          def median_scores(manifest_path):
+              manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+              values = {name: [] for name in categories}
+              for entry in manifest:
+                  summary = entry['summary']
+                  for name in categories:
+                      values[name].append(round(float(summary[name]) * 100))
+              return {name: round(statistics.median(scores)) for name, scores in values.items()}
 
-          mobile = read_scores('mobile')
-          desktop = read_scores('desktop')
-          payload = {
-              'url': os.environ['TARGET_URL'],
-              'mobile': mobile,
-              'desktop': desktop,
-          }
+          for app in apps:
+              payload[app] = {}
+              for mode in ('mobile', 'desktop'):
+                  payload[app][mode] = median_scores(root / app / mode / 'manifest.json')
+
+          output = {'url_origin': 'https://lp-5t7.pages.dev', 'apps': payload}
           Path('production-audit/lighthouse-summary.json').write_text(
-              json.dumps(payload, ensure_ascii=False, indent=2) + '\n',
+              json.dumps(output, ensure_ascii=False, indent=2) + '\n',
               encoding='utf-8',
           )
 
           lines = [
               '## Production Lighthouse',
               '',
-              f"Target: `{payload['url']}`",
-              '',
-              '| Mode | Performance | Accessibility | Best Practices | SEO |',
-              '|---|---:|---:|---:|---:|',
-              f"| Mobile | {mobile['performance']} | {mobile['accessibility']} | {mobile['best-practices']} | {mobile['seo']} |",
-              f"| Desktop | {desktop['performance']} | {desktop['accessibility']} | {desktop['best-practices']} | {desktop['seo']} |",
-              '',
-              'Reports and browser evidence are stored in the `production-lp-audit` artifact.',
+              '| App | Mode | Performance | Accessibility | Best Practices | SEO |',
+              '|---|---|---:|---:|---:|---:|',
           ]
-          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as summary_file:
-              summary_file.write('\n'.join(lines) + '\n')
+          for app, modes in payload.items():
+              for mode, scores in modes.items():
+                  lines.append(
+                      f"| {app} | {mode} | {scores['performance']} | {scores['accessibility']} | "
+                      f"{scores['best-practices']} | {scores['seo']} |"
+                  )
+          with open(Path.cwd() / Path(__import__('os').environ['GITHUB_STEP_SUMMARY']), 'a', encoding='utf-8') as handle:
+              handle.write('\n'.join(lines) + '\n')
 
-          description = (
-              f"M P{mobile['performance']} A{mobile['accessibility']} "
-              f"B{mobile['best-practices']} S{mobile['seo']}; "
-              f"D P{desktop['performance']} A{desktop['accessibility']} "
-              f"B{desktop['best-practices']} S{desktop['seo']}"
+          minimum = min(
+              score
+              for modes in payload.values()
+              for scores in modes.values()
+              for name, score in scores.items()
+              if name != 'performance'
           )
-          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output_file:
-              output_file.write(f'description={description}\n')
+          with open(__import__('os').environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as handle:
+              handle.write(f'description=Both apps audited; minimum quality score {minimum}\n')
           PY
 
       - name: Upload Production audit evidence
@@ -201,17 +164,22 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
+  record-status:
+    if: >-
+      always() &&
+      (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
+    needs: audit
+    permissions:
+      statuses: write
+    runs-on: ubuntu-latest
+    steps:
       - name: Record Production audit statuses
-        if: always()
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          AUDIT_RESULT: ${{ needs.audit.result }}
+          AUDIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          READINESS_OUTCOME: ${{ steps.readiness.outcome }}
-          BROWSER_OUTCOME: ${{ steps.browser.outcome }}
-          LIGHTHOUSE_OUTCOME: ${{ steps.lighthouse.outcome }}
-          SUMMARY_OUTCOME: ${{ steps.summarize.outcome }}
-          SCORE_DESCRIPTION: ${{ steps.summarize.outputs.description }}
         run: |
           set -euo pipefail
 
@@ -239,18 +207,10 @@ jobs:
               > /dev/null
           }
 
-          browser_state=failure
-          browser_description="Production browser verification failed"
-          if [[ "$READINESS_OUTCOME" == "success" && "$BROWSER_OUTCOME" == "success" ]]; then
-            browser_state=success
-            browser_description="Responsive layout, focus, motion and fallbacks verified"
+          if [[ "$AUDIT_RESULT" == "success" ]]; then
+            post_status "production-browser-verification" "success" "Both app browser flows and fallbacks verified"
+            post_status "lighthouse-production" "success" "Both app Lighthouse thresholds passed"
+          else
+            post_status "production-browser-verification" "failure" "Production browser or fallback audit failed"
+            post_status "lighthouse-production" "failure" "Production Lighthouse audit failed"
           fi
-          post_status "production-browser-verification" "$browser_state" "$browser_description"
-
-          lighthouse_state=failure
-          lighthouse_description="Production Lighthouse audit failed"
-          if [[ "$LIGHTHOUSE_OUTCOME" == "success" && "$SUMMARY_OUTCOME" == "success" ]]; then
-            lighthouse_state=success
-            lighthouse_description="${SCORE_DESCRIPTION:-Production Lighthouse reports collected}"
-          fi
-          post_status "lighthouse-production" "$lighthouse_state" "$lighthouse_description"

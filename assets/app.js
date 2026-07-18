@@ -39,7 +39,6 @@ document.addEventListener("DOMContentLoaded", function () {
   function createScreenshotImage(screenshot, isHero) {
     var image = document.createElement("img");
     image.className = "real-app-screen";
-    image.src = screenshot.src;
     image.alt = screenshot.alt;
     image.width = 360;
     image.height = 640;
@@ -48,13 +47,37 @@ document.addEventListener("DOMContentLoaded", function () {
     if (isHero) {
       image.setAttribute("fetchpriority", "high");
     }
+    image.src = screenshot.src;
     return image;
+  }
+
+  function replaceMockAfterImageLoad(mock, screenshot, isHero, onSuccess) {
+    var preloader = new Image();
+    preloader.decoding = "async";
+
+    preloader.addEventListener("load", function () {
+      if (!mock.isConnected) {
+        return;
+      }
+      var image = createScreenshotImage(screenshot, isHero);
+      mock.replaceWith(image);
+      if (onSuccess) {
+        onSuccess();
+      }
+    }, { once: true });
+
+    preloader.addEventListener("error", function () {
+      // 画像が取得できない場合は、配信HTMLに含まれるモックをそのまま表示する。
+      preloader.removeAttribute("src");
+    }, { once: true });
+
+    preloader.src = screenshot.src;
   }
 
   function showRealScreenshots() {
     var heroMock = document.querySelector(".section--mock .phone-mock");
     if (heroMock) {
-      heroMock.replaceWith(createScreenshotImage(screenshots[0], true));
+      replaceMockAfterImageLoad(heroMock, screenshots[0], true);
     }
 
     var screenshotGrid = document.querySelector(".screenshot-grid");
@@ -62,6 +85,7 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
+    var successfulGridImages = 0;
     var screenshotItems = screenshotGrid.querySelectorAll(".screenshot-item");
     screenshotItems.forEach(function (item, index) {
       var screenshot = screenshots[index];
@@ -71,7 +95,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
       var mock = item.querySelector(".phone-mock");
       if (mock) {
-        mock.replaceWith(createScreenshotImage(screenshot, false));
+        replaceMockAfterImageLoad(mock, screenshot, false, function () {
+          successfulGridImages += 1;
+          if (successfulGridImages !== screenshots.length) {
+            return;
+          }
+          var section = screenshotGrid.closest(".section");
+          var subtitle = section ? section.querySelector(".section__subtitle") : null;
+          if (subtitle) {
+            subtitle.textContent = "現在の実装画面を、匿名のサンプルデータで表示しています。";
+          }
+        });
       }
 
       var description = item.querySelector(".screenshot-item__desc");
@@ -79,16 +113,6 @@ document.addEventListener("DOMContentLoaded", function () {
         description.textContent = screenshot.description;
       }
     });
-
-    var section = screenshotGrid.closest(".section");
-    if (!section) {
-      return;
-    }
-
-    var subtitle = section.querySelector(".section__subtitle");
-    if (subtitle) {
-      subtitle.textContent = "現在の実装画面を、匿名のサンプルデータで表示しています。";
-    }
   }
 
   var screenshotStyles = document.createElement("link");
