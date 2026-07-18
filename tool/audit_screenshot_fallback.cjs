@@ -25,6 +25,7 @@ async function main() {
   try {
     await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });
     await page.setRequestInterception(true);
+    let failedScreenshotRequest = false;
     page.on('request', (request) => {
       let pathname = '';
       try {
@@ -32,8 +33,12 @@ async function main() {
       } catch (_error) {
         pathname = '';
       }
-      if (pathname.endsWith('/home-tomorrow.webp')) request.abort('failed');
-      else request.continue();
+      if (pathname.endsWith('/home-tomorrow.webp') && !failedScreenshotRequest) {
+        failedScreenshotRequest = true;
+        request.abort('failed');
+      } else {
+        request.continue();
+      }
     });
 
     const response = await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
@@ -51,6 +56,7 @@ async function main() {
       heroMockPresent: Boolean(document.querySelector('.section--mock .phone-mock')),
     }));
 
+    assert(failedScreenshotRequest, 'the intended screenshot request was not intercepted');
     assert(result.phoneMocks === 1, `expected one retained mock, got ${result.phoneMocks}`);
     assert(result.realScreens === 3, `expected three loaded screenshots, got ${result.realScreens}`);
     assert(result.brokenImages === 0, `broken image elements remain: ${result.brokenImages}`);
