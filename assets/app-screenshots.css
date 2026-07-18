@@ -19,6 +19,23 @@
   margin-inline: auto;
 }
 
+@media (max-width: 899px) {
+  .header__inner {
+    height: auto;
+    min-height: 60px;
+    flex-wrap: wrap;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .header__nav {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+}
+
 @media (max-width: 640px) {
   .mock-wrapper .real-app-screen,
   .screenshot-item .real-app-screen {
