@@ -1,31 +1,49 @@
 # 新アプリ追加チェックリスト
 
-> このチェックリストは、新しいアプリを公開するまでの手順と確認項目をまとめたものです。
-> `docs/app-lp-template.md` と併せて参照してください。
+`docs/app-lp-template.md`と併せて使用します。
 
-## 準備段階
+## 構成
 
-- [ ] アプリ名・スラッグを決定（例: `my-app` → `/apps/my-app/`）
-- [ ] ディレクトリ作成（`apps/{slug}/`）
-- [ ] `docs/app-lp-template.md` を参照してファイル作成
-- [ ] OGP画像を作成（1200×630、`assets/ogp-{slug}.png`）
-- [ ] ルートページ `index.html` にカードを追加
-  - [ ] カテゴリを設定
-  - [ ] ステータスを設定（準備中/構想中）
-  - [ ] 構想中は `card--disabled` でリンクなし
+- [ ] アプリ名とURLスラッグを決定
+- [ ] `apps/{slug}/`に`index.html`、`privacy.html`、`terms.html`、`contact.html`を作成
+- [ ] `tool/site_manifest.json`へアプリ定義を追加
+- [ ] `assets/brand/og-{slug}.png`を1200×630 PNGで作成
+- [ ] 実画面を使う場合は`assets/apps/{slug}/screenshots/`へ配置
+- [ ] ルート`index.html`へカードを追加
+- [ ] `sitemap.xml`へ4 URLを追加
 
-## 内容確認
+## URLとメタデータ
 
-- [ ] 全ページのmetaタグが正しい（title, description, og:*, canonical）
-- [ ] `mailto:` リンクが正しい（件名も含めて確認）
-- [ ] プライバシーポリシーに記載する外部サービスを確定
-- [ ] 利用規約の制定日を更新
-- [ ] お問い合わせ先が正しい
+- [ ] 内部リンクに`.html`が含まれていない
+- [ ] canonicalと`og:url`が各ページのextensionless URLになっている
+- [ ] `og:image`と`twitter:image`が`assets/brand/og-{slug}.png`を指している
+- [ ] title、description、OGP、Twitter Card、faviconが全4ページにある
+- [ ] 外部リンクの`target="_blank"`に`rel="noopener noreferrer"`がある
 
-## 公開前
+## 内容と法務
 
-- [ ] OGPプレビュー確認（Facebook Sharing Debugger / Twitter Card Validator）
-- [ ] レスポンシブ表示確認（スマホ・タブレット）
-- [ ] リンク切れ確認
-- [ ] 準備中・公開中のアプリはルートページからカードリンクがあること
-- [ ] 構想中のアプリは `card--disabled` でリンクなしになっていること
+- [ ] LPの機能説明が実装済み・公開予定の仕様と一致している
+- [ ] 料金、広告、課金、分析、外部送信を断定する場合は実装と一致している
+- [ ] プライバシーポリシーに利用サービス、処理情報、目的、削除方法を記載
+- [ ] 利用規約の免責条項を適用法令で認められる範囲に限定
+- [ ] 公開ページからTODO、仮メールアドレス、未確定のサービス名を除去
+- [ ] 問い合わせ先とmailto件名を確認
+- [ ] 制定日・最終改定日を更新
+
+## 検証
+
+- [ ] `bash tool/prepare_site.sh`
+- [ ] `python3 tool/validate_site.py _site`
+- [ ] 全JavaScriptに`node --check`を実行
+- [ ] 操作可能なUIにはPuppeteer監査を追加
+- [ ] JavaScript無効時と画像・CSS障害時のフォールバックを確認
+- [ ] 390px、820px、1440pxで横スクロールがない
+- [ ] キーボード操作、`:focus-visible`、200%文字拡大を確認
+- [ ] Lighthouseをモバイル・デスクトップ各3回実行
+
+## 公開後
+
+- [ ] 全sitemap URLがHTTP成功し、canonical／OGPがソースと一致する
+- [ ] Productionのセキュリティヘッダーを確認
+- [ ] Search Consoleへsitemapを送信
+- [ ] ストア公開後に主要CTAを正式ストアURLへ変更
