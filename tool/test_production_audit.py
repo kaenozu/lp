@@ -30,8 +30,9 @@ class ProductionAuditTest(unittest.TestCase):
             self.assertIn('node tool/audit_ehenotane.cjs', workflow)
         self.assertIn("page.click('.quiz-card__choice[data-index=\"0\"]')", EHENOTANE_SCRIPT)
         self.assertIn('await page.setJavaScriptEnabled(false)', EHENOTANE_SCRIPT)
-        self.assertIn("pathname.endsWith('/home-tomorrow.webp')", FALLBACK_SCRIPT)
-        self.assertIn('heroMockPresent', FALLBACK_SCRIPT)
+        self.assertIn("pathname.endsWith('/review-extraction.webp')", FALLBACK_SCRIPT)
+        self.assertIn('failedGridMockPresent', FALLBACK_SCRIPT)
+        self.assertIn('heroIsRealScreen', FALLBACK_SCRIPT)
 
     def test_image_fallback_preloads_before_replacing(self) -> None:
         self.assertIn('replaceMockAfterImageLoad', APP_JS)
