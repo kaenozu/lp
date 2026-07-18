@@ -43,8 +43,11 @@ class ProductionAccessibilityAuditTest(unittest.TestCase):
         self.assertIn('navigation landmark labels are not unique', SCRIPT)
         self.assertIn('alt text is absent from accessibility tree', SCRIPT)
 
-    def test_two_hundred_percent_text_resize_is_audited(self) -> None:
+    def test_two_hundred_percent_text_resize_is_csp_compatible(self) -> None:
         self.assertIn("font-size: 200% !important", SCRIPT)
+        self.assertIn('document.styleSheets', SCRIPT)
+        self.assertIn('writableStyleSheet.insertRule', SCRIPT)
+        self.assertNotIn('page.addStyleTag', SCRIPT)
         self.assertIn('text-resize-200.json', SCRIPT)
         self.assertIn("result.rootFontSize === '32px'", SCRIPT)
         self.assertIn('200% text resize causes horizontal overflow', SCRIPT)
