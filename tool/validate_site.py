@@ -108,14 +108,19 @@ def validate_html(site: Path) -> None:
     expected_files = sorted(local_html_path(site, path) for path in expected_paths)
     assert_true(actual_files == expected_files, f"HTML set mismatch: actual={actual_files}, expected={expected_files}")
 
-    html_link_pattern = re.compile(r'href="[^"]*\.html(?:[?#][^"]*)?"')
+    internal_html_link_pattern = re.compile(
+        r'href="(?!(?:https?:|mailto:|tel:|#))[^\"]*\.html(?:[?#][^\"]*)?"'
+    )
     for url_path in expected_paths:
         path = local_html_path(site, url_path)
         text = path.read_text(encoding="utf-8")
         parser = HeadParser()
         parser.feed(text)
         assert_true(parser.title.strip(), f"empty title: {path}")
-        assert_true(not html_link_pattern.search(text), f".html internal link found: {path}")
+        assert_true(
+            not internal_html_link_pattern.search(text),
+            f".html internal link found: {path}",
+        )
 
         favicons = [item.get("href") for item in parser.links if "icon" in item.get("rel", "").split() and item.get("href", "").endswith("favicon.svg")]
         assert_true(favicons == ["/assets/brand/favicon.svg"], f"favicon mismatch: {path}: {favicons}")
