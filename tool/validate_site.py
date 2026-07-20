@@ -63,12 +63,24 @@ def page_paths() -> list[str]:
     return paths
 
 
+def all_html_paths() -> list[str]:
+    paths = page_paths() + ["/404"]
+    for app in MANIFEST["apps"]:
+        base = f"/apps/{app['slug']}"
+        paths.append(f"{base}/404")
+    return paths
+
+
 def local_html_path(site: Path, url_path: str) -> Path:
     if url_path == "/":
         return site / "index.html"
+    if url_path == "/404":
+        return site / "404.html"
     stripped = url_path.strip("/")
     if url_path.endswith("/"):
         return site / stripped / "index.html"
+    if url_path.endswith("/404"):
+        return site / stripped[:-len("404")] / "404.html"
     return site / f"{stripped}.html"
 
 
@@ -186,7 +198,7 @@ def validate_release_presentation(site: Path) -> None:
 
 
 def validate_html(site: Path) -> None:
-    expected_paths = page_paths()
+    expected_paths = all_html_paths()
     actual_files = sorted(site.rglob("*.html"))
     expected_files = sorted(local_html_path(site, path) for path in expected_paths)
     assert_true(actual_files == expected_files, f"HTML set mismatch: actual={actual_files}, expected={expected_files}")
@@ -206,19 +218,22 @@ def validate_html(site: Path) -> None:
             f".html internal link found: {path}",
         )
 
+        is_404 = url_path.endswith("/404")
+
         favicons = [item.get("href") for item in parser.links if "icon" in item.get("rel", "").split() and item.get("href", "").endswith("favicon.svg")]
         assert_true(favicons == ["/assets/brand/favicon.svg"], f"favicon mismatch: {path}: {favicons}")
 
-        canonical = [item.get("href", "") for item in parser.links if item.get("rel") == "canonical"]
-        expected_canonical = f"{ORIGIN}{url_path}"
-        assert_true(canonical == [expected_canonical], f"canonical mismatch: {path}: {canonical}")
+        if not is_404:
+            canonical = [item.get("href", "") for item in parser.links if item.get("rel") == "canonical"]
+            expected_canonical = f"{ORIGIN}{url_path}"
+            assert_true(canonical == [expected_canonical], f"canonical mismatch: {path}: {canonical}")
 
-        og_url = metadata_value(parser, property_name="og:url")
-        og_image = metadata_value(parser, property_name="og:image")
-        twitter_image = metadata_value(parser, name="twitter:image")
-        assert_true(og_url == [expected_canonical], f"og:url mismatch: {path}: {og_url}")
-        assert_true(og_image == [expected_og(url_path)], f"og:image mismatch: {path}: {og_image}")
-        assert_true(twitter_image == og_image, f"twitter:image mismatch: {path}: {twitter_image}")
+            og_url = metadata_value(parser, property_name="og:url")
+            og_image = metadata_value(parser, property_name="og:image")
+            twitter_image = metadata_value(parser, name="twitter:image")
+            assert_true(og_url == [expected_canonical], f"og:url mismatch: {path}: {og_url}")
+            assert_true(og_image == [expected_og(url_path)], f"og:image mismatch: {path}: {og_image}")
+            assert_true(twitter_image == og_image, f"twitter:image mismatch: {path}: {twitter_image}")
 
         verification = metadata_value(parser, name="google-site-verification")
         if url_path == "/" and expected_verification:

@@ -141,7 +141,8 @@ button:focus-visible,
   font-weight: 700;
   text-align: center;
   margin-bottom: 12px;
-  letter-spacing: 0.02em;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
 }
 
 .section__subtitle {
@@ -180,6 +181,13 @@ button:focus-visible,
   transition: all 0.25s ease;
   border: none;
   font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.btn:active {
+  transform: scale(0.97);
+  transition-duration: 50ms;
 }
 
 .btn--primary {
@@ -214,11 +222,19 @@ button:focus-visible,
 
 /* ===== Header ===== */
 .header {
-  background: var(--color-bg);
-  border-bottom: 1px solid var(--color-border);
   position: sticky;
   top: 0;
   z-index: 100;
+  background: rgba(255, 250, 240, 0.78);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border-bottom: 1px solid rgba(234, 223, 206, 0.6);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .header {
+    background: rgba(255, 250, 240, 0.97);
+  }
 }
 
 .header__inner {
@@ -311,12 +327,18 @@ button:focus-visible,
 }
 
 .hero__title {
-  font-size: 2rem;
+  font-size: clamp(1.75rem, 5vw, 2rem);
   font-weight: 800;
-  line-height: 1.35;
+  line-height: 1.2;
   margin-bottom: 16px;
-  letter-spacing: 0.02em;
+  letter-spacing: -0.03em;
   animation: fadeInUp 0.7s ease-out both;
+}
+
+@supports (font-optical-sizing: auto) {
+  .hero__title {
+    font-optical-sizing: auto;
+  }
 }
 
 .hero__sub {
@@ -356,11 +378,11 @@ button:focus-visible,
   padding: 28px 24px;
   box-shadow: var(--shadow-card);
   border: 1px solid var(--color-border);
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+  transition: transform 0.35s cubic-bezier(0.25, 0.1, 0.25, 1), box-shadow 0.35s ease;
 }
 
 .card:hover {
-  transform: translateY(-6px) scale(1.02);
+  transform: translateY(-4px);
   box-shadow: var(--shadow-card-hover);
 }
 
@@ -379,6 +401,7 @@ button:focus-visible,
   font-size: 1.25rem;
   font-weight: 700;
   margin-bottom: 8px;
+  letter-spacing: -0.01em;
 }
 
 .card__desc {
@@ -453,7 +476,7 @@ button:focus-visible,
 }
 
 .feature-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-3px);
   box-shadow: var(--shadow-card-hover);
 }
 
@@ -968,6 +991,12 @@ button:focus-visible,
   color: var(--color-muted);
 }
 
+.card__status--suspended {
+  background: #f5f0e8;
+  color: #9a8a7a;
+  border: 1px solid #e0d5c8;
+}
+
 .card--disabled {
   opacity: 0.8;
 }
@@ -1064,7 +1093,8 @@ button:focus-visible,
   }
 
   .hero__title {
-    font-size: 2.6rem;
+    font-size: clamp(2.4rem, 4vw, 2.6rem);
+    letter-spacing: -0.02em;
   }
 }
 
@@ -1078,7 +1108,8 @@ button:focus-visible,
   }
 
   .hero__title {
-    font-size: 3rem;
+    font-size: clamp(2.6rem, 3.5vw, 3rem);
+    letter-spacing: -0.02em;
   }
 
   .section__title {

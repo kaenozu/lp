@@ -6,7 +6,7 @@ cd "$root_dir"
 
 rm -rf _site
 mkdir -p _site
-cp index.html robots.txt sitemap.xml _headers _site/
+cp index.html robots.txt sitemap.xml _headers 404.html _site/
 cp -R assets apps _site/
 python3 tool/inject_search_console_verification.py _site/index.html
 
