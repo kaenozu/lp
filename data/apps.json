@@ -1,0 +1,96 @@
+{
+  "brand": {
+    "name": "アプノキ",
+    "nameEn": "apunoki",
+    "email": "kaenozu@gmail.com",
+    "url": "https://lp-5t7.pages.dev",
+    "description": "生活、学び、遊び、仕事。日々の中で思いついたアイデアを、小さなアプリとして形にしています。"
+  },
+  "apps": [
+    {
+      "id": "ashita-motsumono",
+      "name": "あしたもつもの",
+      "slug": "ashita-motsumono",
+      "status": "planning",
+      "statusLabel": "準備中",
+      "category": "生活",
+      "categoryEn": "lifestyle",
+      "description": "明日の持ち物・提出物を、前日のうちに親子でチェックする準備アプリ。",
+      "descriptionShort": "学校・園・習い事の準備を前日に確認",
+      "platform": "Android",
+      "storeUrl": null,
+      "lpUrl": "https://lp-5t7.pages.dev/apps/ashita-motsumono/",
+      "privacyUrl": "https://lp-5t7.pages.dev/apps/ashita-motsumono/privacy",
+      "termsUrl": "https://lp-5t7.pages.dev/apps/ashita-motsumono/terms",
+      "contactUrl": "https://lp-5t7.pages.dev/apps/ashita-motsumono/contact",
+      "ogpImage": "/assets/brand/og-ashita-motsumono.png",
+      "emailSubject": "あしたもつもの",
+      "created": "2026-07-08",
+      "updated": "2026-07-08"
+    },
+    {
+      "id": "ehenotane",
+      "name": "へぇの種",
+      "slug": "ehenotane",
+      "status": "planning",
+      "statusLabel": "準備中",
+      "category": "学び",
+      "categoryEn": "education",
+      "description": "ちょっとした雑学をクイズで楽しむ知識アプリ。毎日少しずつ「へぇ」と思える瞬間を届けます。",
+      "descriptionShort": "4択クイズと解説で知らなかったことに出会う",
+      "platform": "Android",
+      "storeUrl": null,
+      "lpUrl": "https://lp-5t7.pages.dev/apps/ehenotane/",
+      "privacyUrl": "https://lp-5t7.pages.dev/apps/ehenotane/privacy",
+      "termsUrl": "https://lp-5t7.pages.dev/apps/ehenotane/terms",
+      "contactUrl": "https://lp-5t7.pages.dev/apps/ehenotane/contact",
+      "ogpImage": "/assets/brand/og-ehenotane.png",
+      "emailSubject": "へぇの種",
+      "created": "2026-07-08",
+      "updated": "2026-07-19"
+    },
+    {
+      "id": "notification-box",
+      "name": "通知ボックス",
+      "slug": "notification-box",
+      "status": "suspended",
+      "statusLabel": "開発休止中",
+      "category": "ツール",
+      "categoryEn": "tools",
+      "description": "通知をあとで確認しやすくするアプリ。",
+      "descriptionShort": "通知を見直すユーティリティ",
+      "platform": "Android",
+      "storeUrl": null,
+      "lpUrl": null,
+      "privacyUrl": null,
+      "termsUrl": null,
+      "contactUrl": null,
+      "ogpImage": null,
+      "emailSubject": "通知ボックス",
+      "created": "2026-07-08",
+      "updated": "2026-07-19"
+    }
+  ],
+  "statuses": {
+    "planning": {
+      "label": "準備中",
+      "description": "公開予定があり、開発継続中",
+      "cssClass": "card__status--planning"
+    },
+    "released": {
+      "label": "公開中",
+      "description": "ストア公開済み",
+      "cssClass": "card__status--released"
+    },
+    "suspended": {
+      "label": "開発休止中",
+      "description": "再開時期未定",
+      "cssClass": "card__status--suspended"
+    },
+    "discontinued": {
+      "label": "終了",
+      "description": "サポート終了",
+      "cssClass": "card__status--discontinued"
+    }
+  }
+}
