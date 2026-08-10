@@ -33,6 +33,26 @@
       "og_image": "og-ehenotane.png",
       "screenshots": [],
       "expected_real_screens": 0
+    },
+    {
+      "slug": "mendolog",
+      "display_name": "めんどログ",
+      "release_status": "preparing",
+      "google_play_url": null,
+      "app_store_url": null,
+      "og_image": "og-portal.png",
+      "screenshots": [],
+      "expected_real_screens": 0
+    },
+    {
+      "slug": "privacy-stamp",
+      "display_name": "Privacy Stamp",
+      "release_status": "preparing",
+      "google_play_url": null,
+      "app_store_url": null,
+      "og_image": "og-portal.png",
+      "screenshots": [],
+      "expected_real_screens": 0
     }
   ]
 }

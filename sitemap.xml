@@ -27,4 +27,28 @@
   <url>
     <loc>https://lp-5t7.pages.dev/apps/ehenotane/contact</loc>
   </url>
+  <url>
+    <loc>https://lp-5t7.pages.dev/apps/mendolog/</loc>
+  </url>
+  <url>
+    <loc>https://lp-5t7.pages.dev/apps/mendolog/privacy</loc>
+  </url>
+  <url>
+    <loc>https://lp-5t7.pages.dev/apps/mendolog/terms</loc>
+  </url>
+  <url>
+    <loc>https://lp-5t7.pages.dev/apps/mendolog/contact</loc>
+  </url>
+  <url>
+    <loc>https://lp-5t7.pages.dev/apps/privacy-stamp/</loc>
+  </url>
+  <url>
+    <loc>https://lp-5t7.pages.dev/apps/privacy-stamp/privacy</loc>
+  </url>
+  <url>
+    <loc>https://lp-5t7.pages.dev/apps/privacy-stamp/terms</loc>
+  </url>
+  <url>
+    <loc>https://lp-5t7.pages.dev/apps/privacy-stamp/contact</loc>
+  </url>
 </urlset>
