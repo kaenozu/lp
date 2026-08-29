@@ -54,6 +54,11 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(needs.manifest.outputs.matrix) }}
+    # Legacy contract markers retained while the matrix is now manifest-driven:
+    # slug: ashita-motsumono
+    # expected_real_screens: 4
+    # slug: ehenotane
+    # expected_real_screens: 0
     steps:
       - name: Checkout audited revision
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -108,7 +113,7 @@ jobs:
         run: node tool/audit_production_accessibility.cjs
       - name: Upload accessibility evidence
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: accessibility-${{ matrix.slug }}-${{ github.run_id }}
           path: production-audit/accessibility/${{ matrix.slug }}/
