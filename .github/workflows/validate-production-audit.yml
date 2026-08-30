@@ -42,3 +42,4 @@ jobs:
         run: |
           python3 -m unittest tool/test_production_audit.py
           python3 -m unittest tool/test_production_accessibility_audit.py
+          python3 -m unittest tool/test_app_identity_links.py
