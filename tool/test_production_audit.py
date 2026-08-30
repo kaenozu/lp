@@ -55,7 +55,8 @@ class ProductionAuditTest(unittest.TestCase):
             self.assertIn("'categories:accessibility'", config)
             self.assertIn("'categories:performance': ['warn'", config)
             self.assertIn('LHCI_APP_SLUG', config)
-        self.assertIn('for slug in ashita-motsumono ehenotane', PRODUCTION_WORKFLOW)
+        self.assertIn("jq -r '.apps[].slug' tool/site_manifest.json", PRODUCTION_WORKFLOW)
+        self.assertIn('while IFS= read -r slug; do', PRODUCTION_WORKFLOW)
 
     def test_tooling_is_pinned(self) -> None:
         for workflow in (PR_WORKFLOW, PRODUCTION_WORKFLOW):

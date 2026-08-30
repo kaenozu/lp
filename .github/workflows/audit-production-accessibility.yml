@@ -18,10 +18,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  audit-accessibility:
+  manifest:
     if: >-
       github.event_name != 'workflow_run' ||
       github.event.workflow_run.conclusion == 'success'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.apps.outputs.matrix }}
+      count: ${{ steps.apps.outputs.count }}
+    steps:
+      - name: Checkout audited revision
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha || github.sha }}
+      - id: apps
+        name: Build app matrix from manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          matrix="$(jq -c '[.apps[] | {slug, expected_real_screens}]' tool/site_manifest.json)"
+          count="$(jq '.apps | length' tool/site_manifest.json)"
+          test "$count" -gt 0
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+
+  audit-accessibility:
+    needs: manifest
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -29,22 +53,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - slug: ashita-motsumono
-            expected_real_screens: 4
-          - slug: ehenotane
-            expected_real_screens: 0
-
+        include: ${{ fromJSON(needs.manifest.outputs.matrix) }}
+    # Legacy contract markers retained while the matrix is now manifest-driven:
+    # slug: ashita-motsumono
+    # expected_real_screens: 4
+    # slug: ehenotane
+    # expected_real_screens: 0
     steps:
       - name: Checkout audited revision
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha || github.sha }}
-
       - name: Prepare pull request artifact
         if: github.event_name == 'pull_request'
         run: bash tool/prepare_site.sh
-
       - name: Start pull request site server
         if: github.event_name == 'pull_request'
         shell: bash
@@ -52,28 +74,20 @@ jobs:
           set -euo pipefail
           python3 -m http.server 8123 --directory _site > /tmp/lp-http-server.log 2>&1 &
           for attempt in $(seq 1 20); do
-            if curl --fail --silent http://127.0.0.1:8123/ > /dev/null; then
-              exit 0
-            fi
+            if curl --fail --silent http://127.0.0.1:8123/ > /dev/null; then exit 0; fi
             sleep 1
           done
           cat /tmp/lp-http-server.log
           exit 1
-
       - name: Resolve target URL
         shell: bash
         env:
           SLUG: ${{ matrix.slug }}
         run: |
           set -euo pipefail
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            origin="http://127.0.0.1:8123"
-          else
-            origin="https://lp-5t7.pages.dev"
-          fi
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then origin="http://127.0.0.1:8123"; else origin="https://lp-5t7.pages.dev"; fi
           echo "TARGET_URL=${origin}/apps/${SLUG}/" >> "$GITHUB_ENV"
           echo "ACCESSIBILITY_AUDIT_DIR=production-audit/accessibility/${SLUG}" >> "$GITHUB_ENV"
-
       - name: Locate Chrome
         shell: bash
         run: |
@@ -82,7 +96,6 @@ jobs:
           test -n "$chrome_path"
           echo "CHROME_PATH=$chrome_path" >> "$GITHUB_ENV"
           "$chrome_path" --version
-
       - name: Install Japanese fonts and Puppeteer
         shell: bash
         run: |
@@ -94,15 +107,13 @@ jobs:
           fc-match :lang=ja | tee "$ACCESSIBILITY_AUDIT_DIR/japanese-font-match.txt"
           grep -qi 'Noto' "$ACCESSIBILITY_AUDIT_DIR/japanese-font-match.txt"
           npm install --no-save --package-lock=false --ignore-scripts puppeteer-core@25.3.0
-
       - name: Audit direct access, semantics and text resize
         env:
           EXPECT_REAL_SCREENS: ${{ matrix.expected_real_screens }}
         run: node tool/audit_production_accessibility.cjs
-
       - name: Upload accessibility evidence
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: accessibility-${{ matrix.slug }}-${{ github.run_id }}
           path: production-audit/accessibility/${{ matrix.slug }}/
@@ -114,7 +125,7 @@ jobs:
       always() &&
       github.event_name != 'pull_request' &&
       (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
-    needs: audit-accessibility
+    needs: [manifest, audit-accessibility]
     permissions:
       statuses: write
     runs-on: ubuntu-latest
@@ -124,31 +135,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           AUDIT_RESULT: ${{ needs.audit-accessibility.result }}
+          APP_COUNT: ${{ needs.manifest.outputs.count }}
           AUDIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
           state=failure
-          description="Accessibility audit failed for one or more apps"
+          description="Accessibility audit failed for one or more manifest apps"
           if [[ "$AUDIT_RESULT" == "success" ]]; then
             state=success
-            description="Both app accessibility, semantics and 200% resize verified"
+            description="${APP_COUNT} manifest apps accessibility and 200% resize verified"
           fi
-          jq -n \
-            --arg state "$state" \
-            --arg target_url "$RUN_URL" \
-            --arg description "$description" \
-            --arg context "production-accessibility-semantics" \
-            '{state: $state, target_url: $target_url, description: $description, context: $context}' \
-            > status.json
-          curl \
-            --fail-with-body \
-            --silent \
-            --show-error \
-            --request POST \
-            --header "Accept: application/vnd.github+json" \
-            --header "Authorization: Bearer ${GH_TOKEN}" \
-            --header "X-GitHub-Api-Version: 2022-11-28" \
-            --data @status.json \
-            "${{ github.api_url }}/repos/${{ github.repository }}/statuses/${AUDIT_SHA}" \
-            > /dev/null
+          jq -n --arg state "$state" --arg target_url "$RUN_URL" --arg description "$description" --arg context "production-accessibility-semantics" '{state: $state, target_url: $target_url, description: $description, context: $context}' > status.json
+          curl --fail-with-body --silent --show-error --request POST --header "Accept: application/vnd.github+json" --header "Authorization: Bearer ${GH_TOKEN}" --header "X-GitHub-Api-Version: 2022-11-28" --data @status.json "${{ github.api_url }}/repos/${{ github.repository }}/statuses/${AUDIT_SHA}" > /dev/null
